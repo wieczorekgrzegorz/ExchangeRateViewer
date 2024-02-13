@@ -2,23 +2,19 @@
 import datetime
 import logging
 from logging.config import dictConfig
-
 import os
-
+import yaml
 
 import matplotlib
 
-log = logging.getLogger(name="__main__." + __name__)
-
+log = logging.getLogger(name="log")
 
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
 NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
 DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
 CHART_FILE = os.path.join("exchange_rate_viewer", "static", "chart.png")
 REQUEST_TIMEOUT = 60
-LOGGING_LEVEL = "DEBUG"
-LOG_DIR = os.path.join("exchange_rate_viewer", "logs")
-LOG_FILENAME = os.path.join(LOG_DIR, "logs.log")
+LOGGING_CONFIG_PATH = os.path.join("exchange_rate_viewer", "logging_config.yaml")
 
 
 def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
@@ -26,42 +22,11 @@ def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
     return datetime.datetime.now().date(), datetime.datetime.now().date() - datetime.timedelta(days=1)
 
 
-def create_log_dir() -> None:
-    """Create a folder for logs if it doesn't exist."""
-    if not os.path.exists(path=LOG_DIR):
-        os.makedirs(name=LOG_DIR)
-
-
-def setup_logger() -> None:
-    """Set up the logger."""
-
-    # https://gist.github.com/kingspp/9451566a5555fb022215ca2b7b802f19
-    # log.setLevel(level=LOGGING_LEVEL)
-    # formatter = logging.Formatter(fmt="%(levelname)s: %(message)s")
-    # create_log_dir()
-
-    # file_handler = logging.FileHandler(filename=LOG_FILENAME, mode="a", encoding="utf-8")
-    # file_handler.setLevel(level=logging.DEBUG)
-    # file_handler.setFormatter(fmt=formatter)
-    # log.addHandler(hdlr=file_handler)
-    dictConfig(
-        {
-            "version": 1,
-            "formatters": {
-                "default": {
-                    "format": "[%(asctime)s] %(levelname)s in %(name)s: %(message)s",
-                }
-            },
-            "handlers": {
-                "wsgi": {
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://flask.logging.wsgi_errors_stream",
-                    "formatter": "default",
-                }
-            },
-            "root": {"level": LOGGING_LEVEL, "handlers": ["wsgi"]},
-        }
-    )
+def setup_logging() -> None:
+    """Set up logging configuration."""
+    with open(file=LOGGING_CONFIG_PATH, mode="r", encoding="utf-8") as f:
+        config = yaml.safe_load(stream=f.read())
+    dictConfig(config=config)
 
 
 def create_data_dir() -> None:
@@ -86,7 +51,9 @@ def set_matplotlib_backend() -> None:
 def setup() -> None:
     """Set up the application."""
 
-    setup_logger()
+    setup_logging()
+    log.info(msg="NBP currency exchange rates app started.")
+
     create_data_dir()
     create_db_file()
     set_matplotlib_backend()

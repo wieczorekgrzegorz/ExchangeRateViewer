@@ -1,7 +1,7 @@
 """Set of custom exceptions for the application."""
 import logging
 
-log = logging.getLogger(name="__main__." + __name__)
+log = logging.getLogger(name="log." + __name__)
 
 
 class InvalidInputError(Exception):
