@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}" />
+    <title>Exchange Rate Chart</title>
+</head>
+
+<body>
+    <!-- Title bar -->
+    <div class='title'>
+        <center>
+            <h2>NBP currency Flask app</h2>
+        </center>
+    </div>
+
+
+    <!-- Input form -->
+    <div id='form' class='form'>
+        <center>
+            <h3>Select Currency and Date Range</h3>
+        </center>
+        <form method="post" action="/">
+
+            <!-- Currency selection -->
+            <!-- <label for="currency"><b>Select currency:</b></label> -->
+            <div class="currency-tiles">
+                {% for currency in available_currencies %}
+                <div class="currency-tile {% if currency == selected_currency %}selected{% endif %}"
+                    onclick="selectCurrency(this, '{{ currency }}')" align='center'>
+                    {{ currency }}
+                </div>
+                {% endfor %}
+            </div>
+            <input type="hidden" id="selected_currency" name="currency" value='{{ selected_currency  }}' required>
+
+            <!-- Highlight of selected currency tile -->
+            <script>
+                function selectCurrency(element, currency) {
+                    document.getElementById('selected_currency').value = currency; /* assign selected tile to var "currency" */
+
+                    var currencyTiles = document.getElementsByClassName("currency-tile");
+                    for (let i = 0; i < currencyTiles.length; i++) {
+                        currencyTiles[i].classList.remove("selected");
+                    } /* remove class 'selected' from every tile other than selected one */
+
+                    element.classList.add("selected");
+                }
+
+                // keep selected currency tile highlighed even after chart generation
+                var defaultCurrency = "{{ selected_currency }}";
+                var defaultTile = document.querySelector(".currency-tile[data-currency='" + defaultCurrency + "']");
+                defaultTile.classList.add("selected");
+            </script>
+
+            <div class="input-group">
+                <!-- Start date selection -->
+                <label for="start_date"><b>Start Date:</b></label>
+                <input class="datepicker" type="date" id="start_date" name="start_date" max="{{ yesterday }}" required
+                    value="{{ start_date }}">
+
+                <!-- End date selection -->
+                <label for="end_date"><b>End Date:</b></label>
+                <input class="datepicker" type="date" id="end_date" name="end_date" max="{{ yesterday }}" required
+                    value="{{ end_date }}">
+            </div>
+
+            <!-- Generate chart button -->
+            <div align='center'>
+                <input type="submit" value="Generate Chart" class="generate-button">
+            </div>
+        </form>
+    </div>
+
+    <!-- Display error message -->
+    {% if error_message %}
+    <div id='error_message' class='response'>
+        <p style="color:red"><b>Error: {{ error_message }}</b></p>
+    </div>
+    {% endif %}
+
+    <!-- Display chart and currency rates table -->
+    {% if chart_available %}
+    <div if='response' class='response'>
+        <div id='chart' class="chart" align='center'>
+            <img src="../static/chart.png" alt="Exchange Rate Chart">
+        </div>
+
+        <div id='table'>
+            <table class="currency-table">
+                <thead>
+                    <tr>
+                        <!-- Column headers -->
+                        <th>Date</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in currency_data %}
+                    <tr>
+                        <!-- Rows with currency rate data -->
+                        <td>{{ row[0] }}</td>
+                        <td>{{ row[1] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class='title' align='right'>
+        <p style="font-size:13px">by <b>Grzegorz Wieczorek</b> <br> @: mail-at-gwieczorek.pl</p>
+    </div>
+
+</body>
+
+</html>
