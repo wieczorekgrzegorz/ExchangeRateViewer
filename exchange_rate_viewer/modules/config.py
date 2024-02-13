@@ -1,3 +1,4 @@
+"""Configuration module for the exchange rate viewer application."""
 import datetime
 import logging
 from logging.config import dictConfig
@@ -10,15 +11,13 @@ import matplotlib
 log = logging.getLogger(name="__main__." + __name__)
 
 
-DATA_FOLDER = "database"
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
 NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
-DB_FILEPATH = os.path.join("src", DATA_FOLDER, "currency_rates.db")
-CHART_FILE = os.path.join("src", "static", "chart.png")
+DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
+CHART_FILE = os.path.join("exchange_rate_viewer", "static", "chart.png")
 REQUEST_TIMEOUT = 60
-TODAY = None
 LOGGING_LEVEL = "DEBUG"
-LOG_DIR = os.path.join("src", "logs")
+LOG_DIR = os.path.join("exchange_rate_viewer", "logs")
 LOG_FILENAME = os.path.join(LOG_DIR, "logs.log")
 
 
@@ -67,8 +66,8 @@ def setup_logger() -> None:
 
 def create_data_dir() -> None:
     """Check if data folder exists and create it if not."""
-    if not os.path.exists(path=os.path.join("src", DATA_FOLDER)):
-        os.makedirs(name=os.path.join("src", DATA_FOLDER))
+    if not os.path.exists(path=os.path.join("src", "database")):
+        os.makedirs(name=os.path.join("src", "database"))
 
 
 def create_db_file() -> None:
