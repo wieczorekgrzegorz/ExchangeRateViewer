@@ -4,40 +4,15 @@ import datetime
 import sqlite3
 
 import flask
-import requests
 from werkzeug.datastructures import ImmutableMultiDict
 
-from modules import custom_exceptions, config, plot
+from modules import custom_exceptions, config, nbp_api_communication, plot
 
 log = logging.getLogger(name="log." + __name__)
 config.setup()
 
 
 app = flask.Flask(import_name=__name__)
-
-
-def fetch_available_currencies() -> list[str]:
-    """Fetches available currencies from NBP API and return a sorted list of currency codes.
-
-    Raises:
-        custom_exceptions.ConnectionError: If failed to fetch available currencies from NBP API."""
-    log.debug(msg=f"Fetching available currencies from NBP API, url: {config.NBP_TABLES_URL}")
-
-    response = requests.get(url=config.NBP_TABLES_URL, timeout=config.REQUEST_TIMEOUT)
-
-    if response.status_code != 200:
-        raise custom_exceptions.NBPConnectionError(
-            message="Failed to fetch available currencies from NBP API, check connection with NBP API."
-        )
-
-    log.debug(msg=f"Successfully fetched available currencies from NBP API, status code: {response.status_code}")
-
-    data = response.json()
-    rates = data[0].get("rates")
-    available_currencies = [rate["code"] for rate in rates]
-    available_currencies.sort()
-
-    return available_currencies
 
 
 def str_to_date(date_str: str) -> datetime.date:
@@ -105,28 +80,6 @@ def is_data_already_in_cache(currency: str, start_date: datetime.date, end_date:
             return False
     log.debug("Requested data aready in local db.")
     return True
-
-
-def fetch_currency_rates(currency: str, start_date_str: str, end_date_str: str) -> dict:
-    """Fetches currency exchange rates from NBP API.
-
-    Parameters:
-        currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
-    """
-    url = config.NBP_RATES_URL + f"{currency}/{start_date_str}/{end_date_str}"
-    response = requests.get(url=url, timeout=config.REQUEST_TIMEOUT)
-
-    if response.status_code == 404:
-        error_message = "Error 404: No data found for selected currency and/or time frame."
-        raise custom_exceptions.NBPConnectionError(message=error_message)
-
-    if response.status_code != 200:
-        error_message = f"Failure, status code: {response.status_code}."
-        raise custom_exceptions.NBPConnectionError(message=error_message)
-
-    return response.json()
 
 
 def create_table(conn_cursor: sqlite3.Cursor) -> None:
@@ -267,11 +220,11 @@ def get_dates_to_check(start_date: datetime.date, days_difference: int) -> list[
 @app.route(rule="/", methods=["GET", "POST"])
 def index() -> str:
     """Main view for the app, fetches currency exchange rates from NBP API and displays them in a chart."""
-    log.info(msg="NBP currency exchange rates app started.")
+
     today, yesterday = config.today_and_yesterday()
 
     try:
-        available_currencies = fetch_available_currencies()
+        available_currencies = nbp_api_communication.fetch_available_currencies()
 
     except (custom_exceptions.NBPConnectionError, custom_exceptions.InvalidInputError) as e:
         return flask.render_template(
@@ -289,8 +242,8 @@ def index() -> str:
             yesterday=yesterday,
         )
 
+    # POST request
     try:
-        # POST request
         selected_currency, start_date_str, end_date_str = validate_user_input(
             request_form=flask.request.form, today=today, yesterday=yesterday
         )
@@ -303,7 +256,7 @@ def index() -> str:
         )
 
         if data_already_in_cache is False:
-            currency_rates = fetch_currency_rates(
+            currency_rates = nbp_api_communication.fetch_currency_rates(
                 currency=selected_currency, start_date_str=start_date_str, end_date_str=end_date_str
             )
             rows_to_insert = create_rows_to_insert(currency_rates=currency_rates, currency=selected_currency)
@@ -351,4 +304,5 @@ def index() -> str:
 
 
 if __name__ == "__main__":
+    log.info(msg="NBP currency exchange rates app started.")
     app.run()
