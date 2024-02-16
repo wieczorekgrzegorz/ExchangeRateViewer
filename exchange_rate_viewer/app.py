@@ -1,6 +1,6 @@
 """Flask app for fetching and displaying currency exchange rates from NBP API."""
 import logging
-from datetime import date, datetime, timedelta
+import datetime
 import sqlite3
 
 import flask
@@ -40,17 +40,22 @@ def fetch_available_currencies() -> list[str]:
     return available_currencies
 
 
-def str_to_date(date_str: str) -> date:
+def str_to_date(date_str: str) -> datetime.date:
     """Convert date string to datetime object."""
-    return datetime.strptime(date_str, "%Y-%m-%d").date()
+    return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
-def get_difference_in_days(start_date: date, end_date: date) -> int:
+def date_to_str(date_obj: datetime.date) -> str:
+    """Convert date object to string."""
+    return date_obj.strftime("%Y-%m-%d")
+
+
+def get_difference_in_days(start_date: datetime.date, end_date: datetime.date) -> int:
     """Calculate difference in days between two dates."""
     return (end_date - start_date).days
 
 
-def is_data_already_in_cache(currency: str, start_date: date, end_date: date) -> bool:
+def is_data_already_in_cache(currency: str, start_date: datetime.date, end_date: datetime.date) -> bool:
     """Check if requested data is already in local database. If not, download from NBP API.
 
     Parameters:
@@ -64,7 +69,7 @@ def is_data_already_in_cache(currency: str, start_date: date, end_date: date) ->
     dates_to_check = []
 
     for i in range(days_difference):
-        date_to_check = start_date + timedelta(days=i)
+        date_to_check = start_date + datetime.timedelta(days=i)
 
         # Weekends excluded as there's no exchange on weekends.
         if date_to_check.isoweekday() < 6:
@@ -208,15 +213,21 @@ def get_data_from_local_db(currency: str, start_date_str: str, end_date_str: str
         return c.fetchall()
 
 
-def validate_user_input(
-    request_form: ImmutableMultiDict[str, str], today: date, yesterday: date
-) -> tuple[str, str, str]:
-    """Validate user input from the form.
+def get_max_date_range() -> datetime.timedelta:
+    """Return maximum date range allowed by NBP API."""
+    return datetime.timedelta(days=config.MAX_DATE_RANGE)
 
+
+def validate_user_input(
+    request_form: ImmutableMultiDict[str, str], today: datetime.date, yesterday: datetime.date
+) -> tuple[str, str, str]:
+    """Validates user input from the form.
 
     Raises:
         custom_exceptions.InvalidInputError: If input is invalid.
     """
+    error_message = None
+    max_range = get_max_date_range()
 
     selected_currency = request_form.get(key="currency")
 
@@ -226,9 +237,6 @@ def validate_user_input(
 
     start_date_str = request_form.get(key="start_date", default=date_to_str(date_obj=yesterday))
     end_date_str = request_form.get(key="end_date", default=date_to_str(date_obj=today))
-
-    max_range = timedelta(days=93)
-    error_message = None
 
     if str_to_date(date_str=start_date_str) > str_to_date(date_str=end_date_str):
         error_message = "'Start Date' cannot be after 'End Date'."
@@ -242,9 +250,18 @@ def validate_user_input(
     return selected_currency, start_date_str, end_date_str
 
 
-def date_to_str(date_obj: date) -> str:
-    """Convert date object to string."""
-    return date_obj.strftime("%Y-%m-%d")
+def get_dates_to_check(start_date: datetime.date, days_difference: int) -> list[datetime.date]:
+    """Create a list of dates to check for data in local database. Excludes weekends."""
+    dates_to_check = []
+
+    for i in range(days_difference):
+        date_to_check = start_date + datetime.timedelta(days=i)
+
+        # Weekends excluded as there's no exchange on weekends.
+        if date_to_check.isoweekday() < 6:
+            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
+
+    return dates_to_check
 
 
 @app.route(rule="/", methods=["GET", "POST"])
