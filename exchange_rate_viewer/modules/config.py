@@ -7,6 +7,8 @@ import yaml
 
 import matplotlib
 
+from exchange_rate_viewer.modules import sqldb_communication
+
 log = logging.getLogger(name="log")
 
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
@@ -57,5 +59,6 @@ def setup() -> None:
 
     create_data_dir()
     create_db_file()
+    sqldb_communication.create_table()
     set_matplotlib_backend()
     log.debug(msg="Application setup complete.")
