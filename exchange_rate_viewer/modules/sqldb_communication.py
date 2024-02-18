@@ -24,7 +24,8 @@ def create_table() -> None:
                 CREATE TABLE IF NOT EXISTS rates(
                     date     TIMESTAMP NOT NULL,
                     currency TEXT NOT NULL,
-                    rate     REAL NOT NULL
+                    rate     REAL NOT NULL,
+                    UNIQUE(date, currency)
                 )
                 """
         conn_cursor.execute(query)
@@ -32,34 +33,7 @@ def create_table() -> None:
     log.debug(msg="Table 'rates' created in the database.")
 
 
-def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
-    """Saves currency exchange rates to local database."""
-    log.debug(msg="Saving currency exchange rates to local DB.")
-    conn = create_sql_connection()
-    with conn:
-        c = conn.cursor()
-
-        c.executemany("INSERT OR REPLACE INTO rates VALUES (?, ?, ?)", rows_to_insert)
-
-        # remove duplicated rows
-        c.execute(
-            """
-                    DELETE
-                    FROM rates AS r1
-                    WHERE EXISTS (
-                        SELECT *
-                        FROM rates AS r2
-                        WHERE r1.date = r2.date
-                            AND r1.currency = r2.currency
-                            AND r1.rowid > r2.rowid
-                            )
-                        """
-        )
-
-        log.debug(msg="Currency exchange rates saved to local DB successfully.")
-
-
-def get_data_from_local_db(currency: str, start_date_str: str, end_date_str: str) -> list[tuple]:
+def get_data_from_sql_table(currency: str, start_date_str: str, end_date_str: str) -> list[tuple]:
     """Fetches currency exchange rates from local database.
 
     Parameters:
@@ -89,6 +63,21 @@ def get_data_from_local_db(currency: str, start_date_str: str, end_date_str: str
         log.debug(msg="Currency exchange rates fetched successfully.")
 
         return c.fetchall()
+
+
+def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
+    """Saves currency exchange rates to local database."""
+    log.debug(msg="Saving currency exchange rates to local DB.")
+    conn = create_sql_connection()
+    with conn:
+        c = conn.cursor()
+
+        c.executemany(
+            "INSERT OR REPLACE INTO rates VALUES (?, ?, ?)",
+            rows_to_insert,
+        )
+
+        log.debug(msg="Currency exchange rates saved to local DB successfully.")
 
 
 def get_difference_in_days(start_date: datetime.date, end_date: datetime.date) -> int:
