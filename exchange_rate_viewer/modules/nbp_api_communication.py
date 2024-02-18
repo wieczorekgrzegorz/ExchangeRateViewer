@@ -108,7 +108,7 @@ def fetch_available_currencies() -> list[str]:
     return available_currencies
 
 
-def build_url(currency: str, start_date_str: str, end_date_str: str) -> str:
+def build_url(currency: str, start_date: str, end_date: str) -> str:
     """Builds NBP API URL for fetching currency exchange rates.
 
     Parameters:
@@ -116,10 +116,10 @@ def build_url(currency: str, start_date_str: str, end_date_str: str) -> str:
         start_date (str): start date in "YYYY-MM-DD" format.
         end_date (str): end date in "YYYY-MM-DD" format.
     """
-    return config.NBP_RATES_URL + f"{currency}/{start_date_str}/{end_date_str}"
+    return config.NBP_RATES_URL + f"{currency}/{start_date}/{end_date}"
 
 
-def fetch_currency_rates(currency: str, start_date_str: str, end_date_str: str) -> dict:
+def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> dict:
     """Fetches currency exchange rates from NBP API.
 
     Parameters:
@@ -131,7 +131,7 @@ def fetch_currency_rates(currency: str, start_date_str: str, end_date_str: str) 
         custom_exceptions.NBPConnectionError: If failed to fetch currency exchange rates from NBP API.
     """
     error_message = "Failed to fetch currency exchange rates from NBP API, check connection with NBP API."
-    url = build_url(currency=currency, start_date_str=start_date_str, end_date_str=end_date_str)
+    url = build_url(currency=currency, start_date=start_date, end_date=end_date)
     response = connect_with_nbp_api(url=url, error_message=error_message)
     check_nbp_response(response=response, error_message=error_message)
 

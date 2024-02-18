@@ -1,8 +1,8 @@
 """Module for communication with the local SQLite database."""
-import datetime
 import logging
 
 import sqlite3
+from typing import Callable, Optional
 
 from modules import config
 
@@ -16,7 +16,7 @@ def create_sql_connection() -> sqlite3.Connection:
 
 def create_table() -> None:
     """Create a table in the database."""
-    log.debug(msg="Creating table 'rates' in the database.")
+    log.info(msg="Creating table 'rates' in the database.")
     conn = create_sql_connection()
     with conn:
         conn_cursor = conn.cursor()
@@ -30,19 +30,28 @@ def create_table() -> None:
                 """
         conn_cursor.execute(query)
 
-    log.debug(msg="Table 'rates' created in the database.")
+    log.info(msg="Table 'rates' created in the database.")
 
 
-def get_data_from_sql_table(currency: str, start_date_str: str, end_date_str: str) -> list[tuple]:
+def get_data_from_sql_table(
+    currency: str,
+    start_date: str,
+    end_date: str,
+    row_factory: Optional[sqlite3.Row | Callable] = None,
+) -> list:
     """Fetches currency exchange rates from local database.
 
     Parameters:
         currency (str): currency code as per NBP API.
         start_date (str): start date in "YYYY-MM-DD" format.
         end_date (str): end date in "YYYY-MM-DD" format.
+        row_factory (sqlite3.Row | Callable): row factory for the cursor.
     """
-    log.debug(msg=f"Fetching currency exchange rates from local DB ({currency}, {start_date_str}, {end_date_str}).")
+    log.debug(msg=f"Fetching currency exchange rates from local DB ({currency}, {start_date}, {end_date}).")
     conn = create_sql_connection()
+
+    if row_factory:
+        conn.row_factory = row_factory
 
     with conn:
         c = conn.cursor()
@@ -58,11 +67,15 @@ def get_data_from_sql_table(currency: str, start_date_str: str, end_date_str: st
             ORDER BY
                 date
         """
-        c.execute(query, (currency, start_date_str, end_date_str))
+        c.execute(query, (currency, start_date, end_date))
 
-        log.debug(msg="Currency exchange rates fetched successfully.")
+        currency_table = c.fetchall()
 
-        return c.fetchall()
+        log.debug(msg=f"Local SQL table read successfully: {currency_table}")
+
+        log.info(msg="Local SQL table read successfully.")
+
+        return currency_table
 
 
 def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
@@ -78,59 +91,3 @@ def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
         )
 
         log.debug(msg="Currency exchange rates saved to local DB successfully.")
-
-
-def get_difference_in_days(start_date: datetime.date, end_date: datetime.date) -> int:
-    """Calculate difference in days between two dates."""
-    return (end_date - start_date).days
-
-
-def is_data_already_in_cache(currency: str, start_date: datetime.date, end_date: datetime.date) -> bool:
-    """Check if requested data is already in local database. If not, download from NBP API.
-
-    Parameters:
-        currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
-    """
-
-    days_difference = get_difference_in_days(start_date=start_date, end_date=end_date)
-
-    dates_to_check = []
-
-    for i in range(days_difference):
-        date_to_check = start_date + datetime.timedelta(days=i)
-
-        if date_to_check.isoweekday() < 6:
-            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
-
-    conn = create_sql_connection()
-    conn.row_factory = lambda cursor, row: row[0]
-    cached_list = []
-
-    with conn:
-        c = conn.cursor()
-        query = """
-                    SELECT
-                        date,
-                        rate
-                    FROM
-                        rates
-                    WHERE
-                        currency = ? AND date BETWEEN ? AND ?
-                    ORDER BY
-                        date
-                """
-        try:
-            c.execute(query, (currency, start_date, end_date))
-        except sqlite3.OperationalError:
-            return False
-
-    cached_list = c.fetchall()
-
-    for day in dates_to_check:
-        if day not in cached_list:
-            log.debug("Requested data not in cache, downloading from NBP API.")
-            return False
-    log.debug("Requested data aready in local db.")
-    return True
