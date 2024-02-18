@@ -79,30 +79,38 @@ def get_difference_in_days(start_date: str, end_date: str) -> int:
     return (str_to_date(date_str=end_date) - str_to_date(date_str=start_date)).days
 
 
-def is_data_already_in_cache(list_of_dates: list[str], start_date: str, end_date: str) -> bool:
+def define_all_days_to_check(start_date: str, days_difference: int) -> list[str]:
+    """Collect dates to check for data in local database. Excludes weekends."""
+    days_to_check = []
+
+    for i in range(days_difference):
+        new_date = str_to_date(date_str=start_date) + datetime.timedelta(days=i)
+
+        if new_date.isoweekday() < 6:
+            days_to_check.append(new_date.strftime("%Y-%m-%d"))
+
+    return days_to_check
+
+
+def is_data_already_in_cache(data_present: list[str], start_date: str, end_date: str) -> bool:
     """Check if requested data is already in local database. If not, download from NBP API.
 
     Parameters:
-        list_of_dates (list[str]): list of strings representing dates in "YYYY-MM-DD" format.
+        data_present (list[str]): list of dates in "YYYY-MM-DD" format representing data for a currency.
         start_date (str): start date in "YYYY-MM-DD" format.
         end_date (str): end date in "YYYY-MM-DD" format.
     """
 
     days_difference = get_difference_in_days(start_date=start_date, end_date=end_date)
 
-    dates_to_check = []
+    days_to_check = define_all_days_to_check(start_date=start_date, days_difference=days_difference)
 
-    for i in range(days_difference):
-        date_to_check = str_to_date(date_str=start_date) + datetime.timedelta(days=i)
-
-        if date_to_check.isoweekday() < 6:
-            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
-
-    for day in dates_to_check:
-        if day not in list_of_dates:
-            log.info("Requested data not present in local DB, sending request to NBP API.")
+    for day in days_to_check:
+        if day not in data_present:
+            log.info(msg="Requested data not (fully) present in local DB, sending request to NBP API.")
             return False
-    log.debug("Requested data aready in local db.")
+
+    log.debug(msg="Requested data fully present in local db.")
     return True
 
 
@@ -157,7 +165,7 @@ def index() -> str:
         )
 
         data_already_in_cache = is_data_already_in_cache(
-            list_of_dates=dates_recorded_for_currency, start_date=start_date, end_date=end_date
+            data_present=dates_recorded_for_currency, start_date=start_date, end_date=end_date
         )
 
         if data_already_in_cache is False:
