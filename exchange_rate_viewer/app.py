@@ -8,7 +8,6 @@ from werkzeug.datastructures import ImmutableMultiDict
 from modules import custom_exceptions, config, nbp_api_communication, plot, sqldb_communication
 
 log = logging.getLogger(name="log." + __name__)
-config.setup()
 
 
 app = flask.Flask(import_name=__name__)
@@ -24,9 +23,19 @@ def date_to_str(date_obj: datetime.date) -> str:
     return date_obj.strftime("%Y-%m-%d")
 
 
+def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
+    """Return today's and yesterday's date."""
+    return datetime.datetime.now().date(), datetime.datetime.now().date() - datetime.timedelta(days=1)
+
+
 def get_max_date_range() -> datetime.timedelta:
     """Return maximum date range allowed by NBP API."""
     return datetime.timedelta(days=config.MAX_DATE_RANGE)
+
+
+def get_difference_in_days(start_date: str, end_date: str) -> int:
+    """Calculate difference in days between two dates."""
+    return (str_to_date(date_str=end_date) - str_to_date(date_str=start_date)).days
 
 
 def validate_user_input(
@@ -59,24 +68,6 @@ def validate_user_input(
 
     log.debug(msg="User input valid.")
     return selected_currency, start_date_str, end_date_str
-
-
-def get_dates_to_check(start_date: datetime.date, days_difference: int) -> list[datetime.date]:
-    """Create a list of dates to check for data in local database. Excludes weekends."""
-    dates_to_check = []
-
-    for i in range(days_difference):
-        date_to_check = start_date + datetime.timedelta(days=i)
-
-        if date_to_check.isoweekday() < 6:
-            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
-
-    return dates_to_check
-
-
-def get_difference_in_days(start_date: str, end_date: str) -> int:
-    """Calculate difference in days between two dates."""
-    return (str_to_date(date_str=end_date) - str_to_date(date_str=start_date)).days
 
 
 def define_all_days_to_check(start_date: str, days_difference: int) -> list[str]:
@@ -114,23 +105,11 @@ def is_data_already_in_cache(data_present: list[str], start_date: str, end_date:
     return True
 
 
-def convert_nbp_api_list_to_sql_table_rows(currency_rates: dict, currency: str) -> list[tuple]:
-    """Converts currency rates from NBP API to a list of tuples for insertion into the local database."""
-    rows_to_insert = []
-
-    for item in currency_rates["rates"]:
-        effective_date = item["effectiveDate"]
-        rate = item["mid"]
-        rows_to_insert.append((effective_date, currency, rate))
-
-    return rows_to_insert
-
-
 @app.route(rule="/", methods=["GET", "POST"])
 def index() -> str:
     """Main view for the app, fetches currency exchange rates from NBP API and displays them in a chart."""
 
-    today, yesterday = config.today_and_yesterday()
+    today, yesterday = today_and_yesterday()
 
     try:
         available_currencies = nbp_api_communication.fetch_available_currencies()
@@ -173,10 +152,7 @@ def index() -> str:
             currency_rates = nbp_api_communication.fetch_currency_rates(
                 currency=selected_currency, start_date=start_date, end_date=end_date
             )
-            rows_to_insert = convert_nbp_api_list_to_sql_table_rows(
-                currency_rates=currency_rates, currency=selected_currency
-            )
-            sqldb_communication.save_currency_rates_to_db(rows_to_insert=rows_to_insert)
+            sqldb_communication.save_currency_rates_to_db(rows_to_insert=currency_rates)
 
         currency_table = sqldb_communication.get_data_from_sql_table(
             currency=selected_currency, start_date=start_date, end_date=end_date
@@ -222,4 +198,8 @@ def index() -> str:
 
 
 if __name__ == "__main__":
+    config.setup_logging()
+    log.info(msg="NBP currency exchange rates app started.")
+
+    config.setup_app()
     app.run()

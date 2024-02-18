@@ -29,7 +29,7 @@ def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
     return response
 
 
-def check_nbp_response(response: requests.Response, error_message: str) -> None:
+def check_nbp_response(response: requests.Response, general_error_message: str, error_404_message: str) -> None:
     """Checks if the response from NBP API is valid.
 
     Raises:
@@ -38,13 +38,12 @@ def check_nbp_response(response: requests.Response, error_message: str) -> None:
     """
 
     if response.status_code == 404:
-        error_404_message = "Error 404: No data found for selected currency and/or time frame."
         raise custom_exceptions.NBPConnectionError(message=error_404_message)
 
     if response.status_code != 200:
         log_message = f"NBP API response (<{response.status_code}, {response.reason}>): {response.text}"
         log.warning(msg=log_message)
-        raise custom_exceptions.NBPConnectionError(message=error_message)
+        raise custom_exceptions.NBPConnectionError(message=general_error_message)
 
     log.info(msg=f"Request successfull, status code: {response.status_code}, {response.reason}.")
 
@@ -103,7 +102,8 @@ def fetch_available_currencies() -> list[str]:
 
     log.info(msg="Fetching available currencies from NBP API.")
     response = connect_with_nbp_api(url=config.NBP_TABLES_URL, error_message=error_message)
-    check_nbp_response(response=response, error_message=error_message)
+    print(f"available_currencies: {response.text}")
+    check_nbp_response(response=response, general_error_message=error_message, error_404_message=error_message)
     rates = get_list_of_currency_dicts_from(nbp_response=response)
     available_currencies = get_available_currencies_from(rates=rates)
 
@@ -121,7 +121,24 @@ def build_url(currency: str, start_date: str, end_date: str) -> str:
     return config.NBP_RATES_URL + f"{currency}/{start_date}/{end_date}"
 
 
-def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> dict:
+def convert_response_to_json(nbp_api_response: requests.Response) -> dict:
+    """Converts response from NBP API to JSON format."""
+    return nbp_api_response.json()
+
+
+def convert_nbp_response_to_list_of_exchange_rates(response_json: dict, currency: str) -> list[tuple]:
+    """Converts currency rates from NBP API to a list of tuples for insertion into the local database."""
+    rows_to_insert = []
+
+    for item in response_json["rates"]:
+        effective_date = item["effectiveDate"]
+        rate = item["mid"]
+        rows_to_insert.append((effective_date, currency, rate))
+
+    return rows_to_insert
+
+
+def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> list[tuple[str, str, str]]:
     """Fetches currency exchange rates from NBP API.
 
     Parameters:
@@ -129,15 +146,25 @@ def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> dict:
         start_date (str): start date in "YYYY-MM-DD" format.
         end_date (str): end date in "YYYY-MM-DD" format.
 
+    Returns:
+        list[tuple]: List of tuples containing date, currency code and exchange rate.
+
     Raises:
         custom_exceptions.NBPConnectionError: If failed to fetch currency exchange rates from NBP API.
     """
-    error_message = "Failed to fetch currency exchange rates from NBP API, check connection with NBP API."
+    general_error_message = "Failed to fetch currency exchange rates from NBP API, check connection with NBP API."
+    error_404_message = "Error 404: No data found for selected currency and/or time frame."
 
     log.info(msg=f"Fetching currency exchange rates from NBP API ({currency}/PLN, {start_date}, {end_date}).")
     url = build_url(currency=currency, start_date=start_date, end_date=end_date)
-    response = connect_with_nbp_api(url=url, error_message=error_message)
+    response = connect_with_nbp_api(url=url, error_message=general_error_message)
 
-    check_nbp_response(response=response, error_message=error_message)
+    print(f"Currency rates: {response.text}")
 
-    return response.json()
+    check_nbp_response(
+        response=response, general_error_message=general_error_message, error_404_message=error_404_message
+    )
+
+    response_json = convert_response_to_json(nbp_api_response=response)
+
+    return convert_nbp_response_to_list_of_exchange_rates(response_json=response_json, currency=currency)

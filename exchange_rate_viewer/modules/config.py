@@ -1,7 +1,6 @@
 """Configuration module for the exchange rate viewer application."""
-import datetime
 import logging
-from logging.config import dictConfig
+import logging.config
 import os
 import yaml
 
@@ -21,16 +20,11 @@ LOGGING_CONFIG_FILEPATH = os.path.join("exchange_rate_viewer", "logging_config.y
 MAX_DATE_RANGE = 93  # Maximum range of days allowed by NBP API
 
 
-def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
-    """Return today's and yesterday's date."""
-    return datetime.datetime.now().date(), datetime.datetime.now().date() - datetime.timedelta(days=1)
-
-
 def setup_logging() -> None:
     """Set up logging configuration."""
     with open(file=LOGGING_CONFIG_FILEPATH, mode="r", encoding="utf-8") as f:
         config = yaml.safe_load(stream=f.read())
-    dictConfig(config=config)
+    logging.config.dictConfig(config=config)
 
 
 def create_data_dir() -> None:
@@ -60,15 +54,12 @@ def set_matplotlib_backend() -> None:
     matplotlib.use(backend="Agg")
 
 
-def setup() -> None:
+def setup_app() -> None:
     """Set up the application."""
-
-    setup_logging()
-    log.info(msg="NBP currency exchange rates app started.")
-
     create_data_dir()
     create_db_file()
     sqldb_communication.create_table()
 
     set_matplotlib_backend()
+
     log.info(msg="Application setup completed.")
