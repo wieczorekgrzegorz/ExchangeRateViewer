@@ -1,13 +1,12 @@
 """Flask app for fetching and displaying currency exchange rates from NBP API."""
 import logging
-from datetime import date, datetime, timedelta
+import datetime
 import sqlite3
 
 import flask
-import requests
 from werkzeug.datastructures import ImmutableMultiDict
 
-from modules import custom_exceptions, config, plot
+from modules import custom_exceptions, config, nbp_api_communication, plot
 
 log = logging.getLogger(name="log." + __name__)
 config.setup()
@@ -16,41 +15,22 @@ config.setup()
 app = flask.Flask(import_name=__name__)
 
 
-def fetch_available_currencies() -> list[str]:
-    """Fetches available currencies from NBP API and return a sorted list of currency codes.
-
-    Raises:
-        custom_exceptions.ConnectionError: If failed to fetch available currencies from NBP API."""
-    log.debug(msg=f"Fetching available currencies from NBP API, url: {config.NBP_TABLES_URL}")
-
-    response = requests.get(url=config.NBP_TABLES_URL, timeout=config.REQUEST_TIMEOUT)
-
-    if response.status_code != 200:
-        raise custom_exceptions.NBPConnectionError(
-            message="Failed to fetch available currencies from NBP API, check connection with NBP API."
-        )
-
-    log.debug(msg=f"Successfully fetched available currencies from NBP API, status code: {response.status_code}")
-
-    data = response.json()
-    rates = data[0].get("rates")
-    available_currencies = [rate["code"] for rate in rates]
-    available_currencies.sort()
-
-    return available_currencies
-
-
-def str_to_date(date_str: str) -> date:
+def str_to_date(date_str: str) -> datetime.date:
     """Convert date string to datetime object."""
-    return datetime.strptime(date_str, "%Y-%m-%d").date()
+    return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
-def get_difference_in_days(start_date: date, end_date: date) -> int:
+def date_to_str(date_obj: datetime.date) -> str:
+    """Convert date object to string."""
+    return date_obj.strftime("%Y-%m-%d")
+
+
+def get_difference_in_days(start_date: datetime.date, end_date: datetime.date) -> int:
     """Calculate difference in days between two dates."""
     return (end_date - start_date).days
 
 
-def is_data_already_in_cache(currency: str, start_date: date, end_date: date) -> bool:
+def is_data_already_in_cache(currency: str, start_date: datetime.date, end_date: datetime.date) -> bool:
     """Check if requested data is already in local database. If not, download from NBP API.
 
     Parameters:
@@ -64,9 +44,8 @@ def is_data_already_in_cache(currency: str, start_date: date, end_date: date) ->
     dates_to_check = []
 
     for i in range(days_difference):
-        date_to_check = start_date + timedelta(days=i)
+        date_to_check = start_date + datetime.timedelta(days=i)
 
-        # Weekends excluded as there's no exchange on weekends.
         if date_to_check.isoweekday() < 6:
             dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
 
@@ -100,28 +79,6 @@ def is_data_already_in_cache(currency: str, start_date: date, end_date: date) ->
             return False
     log.debug("Requested data aready in local db.")
     return True
-
-
-def fetch_currency_rates(currency: str, start_date_str: str, end_date_str: str) -> dict:
-    """Fetches currency exchange rates from NBP API.
-
-    Parameters:
-        currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
-    """
-    url = config.NBP_RATES_URL + f"{currency}/{start_date_str}/{end_date_str}"
-    response = requests.get(url=url, timeout=config.REQUEST_TIMEOUT)
-
-    if response.status_code == 404:
-        error_message = "Error 404: No data found for selected currency and/or time frame."
-        raise custom_exceptions.NBPConnectionError(message=error_message)
-
-    if response.status_code != 200:
-        error_message = f"Failure, status code: {response.status_code}."
-        raise custom_exceptions.NBPConnectionError(message=error_message)
-
-    return response.json()
 
 
 def create_table(conn_cursor: sqlite3.Cursor) -> None:
@@ -208,15 +165,21 @@ def get_data_from_local_db(currency: str, start_date_str: str, end_date_str: str
         return c.fetchall()
 
 
-def validate_user_input(
-    request_form: ImmutableMultiDict[str, str], today: date, yesterday: date
-) -> tuple[str, str, str]:
-    """Validate user input from the form.
+def get_max_date_range() -> datetime.timedelta:
+    """Return maximum date range allowed by NBP API."""
+    return datetime.timedelta(days=config.MAX_DATE_RANGE)
 
+
+def validate_user_input(
+    request_form: ImmutableMultiDict[str, str], today: datetime.date, yesterday: datetime.date
+) -> tuple[str, str, str]:
+    """Validates user input from the form.
 
     Raises:
         custom_exceptions.InvalidInputError: If input is invalid.
     """
+    error_message = None
+    max_range = get_max_date_range()
 
     selected_currency = request_form.get(key="currency")
 
@@ -226,9 +189,6 @@ def validate_user_input(
 
     start_date_str = request_form.get(key="start_date", default=date_to_str(date_obj=yesterday))
     end_date_str = request_form.get(key="end_date", default=date_to_str(date_obj=today))
-
-    max_range = timedelta(days=93)
-    error_message = None
 
     if str_to_date(date_str=start_date_str) > str_to_date(date_str=end_date_str):
         error_message = "'Start Date' cannot be after 'End Date'."
@@ -242,19 +202,27 @@ def validate_user_input(
     return selected_currency, start_date_str, end_date_str
 
 
-def date_to_str(date_obj: date) -> str:
-    """Convert date object to string."""
-    return date_obj.strftime("%Y-%m-%d")
+def get_dates_to_check(start_date: datetime.date, days_difference: int) -> list[datetime.date]:
+    """Create a list of dates to check for data in local database. Excludes weekends."""
+    dates_to_check = []
+
+    for i in range(days_difference):
+        date_to_check = start_date + datetime.timedelta(days=i)
+
+        if date_to_check.isoweekday() < 6:
+            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
+
+    return dates_to_check
 
 
 @app.route(rule="/", methods=["GET", "POST"])
 def index() -> str:
     """Main view for the app, fetches currency exchange rates from NBP API and displays them in a chart."""
-    log.info(msg="NBP currency exchange rates app started.")
+
     today, yesterday = config.today_and_yesterday()
 
     try:
-        available_currencies = fetch_available_currencies()
+        available_currencies = nbp_api_communication.fetch_available_currencies()
 
     except (custom_exceptions.NBPConnectionError, custom_exceptions.InvalidInputError) as e:
         return flask.render_template(
@@ -272,8 +240,8 @@ def index() -> str:
             yesterday=yesterday,
         )
 
+    # POST request
     try:
-        # POST request
         selected_currency, start_date_str, end_date_str = validate_user_input(
             request_form=flask.request.form, today=today, yesterday=yesterday
         )
@@ -286,7 +254,7 @@ def index() -> str:
         )
 
         if data_already_in_cache is False:
-            currency_rates = fetch_currency_rates(
+            currency_rates = nbp_api_communication.fetch_currency_rates(
                 currency=selected_currency, start_date_str=start_date_str, end_date_str=end_date_str
             )
             rows_to_insert = create_rows_to_insert(currency_rates=currency_rates, currency=selected_currency)
@@ -334,4 +302,5 @@ def index() -> str:
 
 
 if __name__ == "__main__":
+    log.info(msg="NBP currency exchange rates app started.")
     app.run()

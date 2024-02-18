@@ -12,9 +12,10 @@ log = logging.getLogger(name="log")
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
 NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
 DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
-CHART_FILE = os.path.join("exchange_rate_viewer", "static", "chart.png")
+CHART_FILEPATH = os.path.join("exchange_rate_viewer", "static", "chart.png")
 REQUEST_TIMEOUT = 60
-LOGGING_CONFIG_PATH = os.path.join("exchange_rate_viewer", "logging_config.yaml")
+LOGGING_CONFIG_FILEPATH = os.path.join("exchange_rate_viewer", "logging_config.yaml")
+MAX_DATE_RANGE = 93  # Maximum range of days allowed by NBP API
 
 
 def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
@@ -24,7 +25,7 @@ def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
 
 def setup_logging() -> None:
     """Set up logging configuration."""
-    with open(file=LOGGING_CONFIG_PATH, mode="r", encoding="utf-8") as f:
+    with open(file=LOGGING_CONFIG_FILEPATH, mode="r", encoding="utf-8") as f:
         config = yaml.safe_load(stream=f.read())
     dictConfig(config=config)
 
