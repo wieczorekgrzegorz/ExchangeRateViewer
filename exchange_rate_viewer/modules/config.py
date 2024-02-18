@@ -71,4 +71,4 @@ def setup() -> None:
     sqldb_communication.create_table()
 
     set_matplotlib_backend()
-    log.info(msg="Application setup complete.")
+    log.info(msg="Application setup completed.")

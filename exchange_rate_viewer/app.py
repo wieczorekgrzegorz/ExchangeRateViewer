@@ -222,5 +222,4 @@ def index() -> str:
 
 
 if __name__ == "__main__":
-    log.info(msg="NBP currency exchange rates app started.")
     app.run()

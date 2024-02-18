@@ -14,7 +14,7 @@ handlers:
   werkzeug:
     class: logging.StreamHandler
     formatter: werkzeug
-    level: WARNING
+    level: INFO
 root:
   level: INFO
   handlers: [default]
@@ -25,5 +25,5 @@ loggers:
     propagate: False
   werkzeug:
     handlers: [werkzeug]
-    level: WARNING
+    level: INFO
     propagate: False
