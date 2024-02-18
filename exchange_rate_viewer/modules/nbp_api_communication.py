@@ -25,6 +25,17 @@ def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
         log.exception(msg=exc)
         raise custom_exceptions.NBPConnectionError(message=error_message) from exc
 
+    return response
+
+
+def check_nbp_response(response: requests.Response, error_message: str) -> None:
+    """Checks if the response from NBP API is valid.
+
+    Raises:
+        custom_exceptions.NBPConnectionError: If the response from NBP API is not valid.
+            Uses error_message as the exception message.
+    """
+
     if response.status_code == 404:
         error_404_message = "Error 404: No data found for selected currency and/or time frame."
         raise custom_exceptions.NBPConnectionError(message=error_404_message)
@@ -35,8 +46,6 @@ def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
         raise custom_exceptions.NBPConnectionError(message=error_message)
 
     log.debug(msg=f"Request successfull, status code: {response.status_code}, {response.reason}.")
-
-    return response
 
 
 def get_list_of_currency_dicts_from(nbp_response: requests.Response) -> list[dict]:
@@ -92,6 +101,7 @@ def fetch_available_currencies() -> list[str]:
     log.info(msg="Fetching available currencies from NBP API.")
     error_message = "Failed to fetch available currencies from NBP API, check connection with NBP API."
     response = connect_with_nbp_api(url=config.NBP_TABLES_URL, error_message=error_message)
+    check_nbp_response(response=response, error_message=error_message)
     rates = get_list_of_currency_dicts_from(nbp_response=response)
     available_currencies = get_available_currencies_from(rates=rates)
 
@@ -123,5 +133,6 @@ def fetch_currency_rates(currency: str, start_date_str: str, end_date_str: str) 
     error_message = "Failed to fetch currency exchange rates from NBP API, check connection with NBP API."
     url = build_url(currency=currency, start_date_str=start_date_str, end_date_str=end_date_str)
     response = connect_with_nbp_api(url=url, error_message=error_message)
+    check_nbp_response(response=response, error_message=error_message)
 
     return response.json()
