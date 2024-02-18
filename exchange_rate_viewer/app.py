@@ -46,7 +46,6 @@ def is_data_already_in_cache(currency: str, start_date: datetime.date, end_date:
     for i in range(days_difference):
         date_to_check = start_date + datetime.timedelta(days=i)
 
-        # Weekends excluded as there's no exchange on weekends.
         if date_to_check.isoweekday() < 6:
             dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
 
@@ -210,7 +209,6 @@ def get_dates_to_check(start_date: datetime.date, days_difference: int) -> list[
     for i in range(days_difference):
         date_to_check = start_date + datetime.timedelta(days=i)
 
-        # Weekends excluded as there's no exchange on weekends.
         if date_to_check.isoweekday() < 6:
             dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
 
