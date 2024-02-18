@@ -14,16 +14,16 @@ handlers:
   werkzeug:
     class: logging.StreamHandler
     formatter: werkzeug
-    level: INFO
+    level: WARNING
 root:
-  level: DEBUG
+  level: INFO
   handlers: [default]
 loggers:
   log:
     handlers: [default]
-    level: DEBUG
+    level: INFO
     propagate: False
   werkzeug:
     handlers: [werkzeug]
-    level: INFO
+    level: WARNING
     propagate: False

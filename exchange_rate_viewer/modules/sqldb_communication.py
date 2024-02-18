@@ -16,7 +16,7 @@ def create_sql_connection() -> sqlite3.Connection:
 
 def create_table() -> None:
     """Create a table in the database."""
-    log.info(msg="Creating table 'rates' in the database.")
+    log.debug(msg="Creating table 'rates' in the database.")
     conn = create_sql_connection()
     with conn:
         conn_cursor = conn.cursor()
@@ -30,7 +30,7 @@ def create_table() -> None:
                 """
         conn_cursor.execute(query)
 
-    log.info(msg="Table 'rates' created in the database.")
+    log.debug(msg="Table 'rates' created in the local database.")
 
 
 def get_data_from_sql_table(
@@ -47,7 +47,7 @@ def get_data_from_sql_table(
         end_date (str): end date in "YYYY-MM-DD" format.
         row_factory (sqlite3.Row | Callable): row factory for the cursor.
     """
-    log.debug(msg=f"Fetching currency exchange rates from local DB ({currency}, {start_date}, {end_date}).")
+    log.info(msg=f"Fetching currency exchange rates from local DB ({currency}/PLN, {start_date}, {end_date}).")
     conn = create_sql_connection()
 
     if row_factory:
@@ -80,7 +80,7 @@ def get_data_from_sql_table(
 
 def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
     """Saves currency exchange rates to local database."""
-    log.debug(msg="Saving currency exchange rates to local DB.")
+    log.info(msg="Saving currency exchange rates to local DB.")
     conn = create_sql_connection()
     with conn:
         c = conn.cursor()
@@ -90,4 +90,4 @@ def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
             rows_to_insert,
         )
 
-        log.debug(msg="Currency exchange rates saved to local DB successfully.")
+        log.info(msg="Currency exchange rates saved to local DB successfully.")

@@ -13,6 +13,7 @@ log = logging.getLogger(name="log")
 
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
 NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
+DB_DIR_PATH = os.path.join("src", "database")
 DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
 CHART_FILEPATH = os.path.join("exchange_rate_viewer", "static", "chart.png")
 REQUEST_TIMEOUT = 60
@@ -34,15 +35,23 @@ def setup_logging() -> None:
 
 def create_data_dir() -> None:
     """Check if data folder exists and create it if not."""
-    if not os.path.exists(path=os.path.join("src", "database")):
-        os.makedirs(name=os.path.join("src", "database"))
+    if not os.path.exists(path=DB_DIR_PATH):
+        log.debug(msg="Creating data directory.")
+        os.makedirs(name=DB_DIR_PATH)
+        log.debug(msg=f"Data directory created in: {DB_DIR_PATH}")
+    else:
+        log.debug(msg="Data directory already exists, skipping creation.")
 
 
 def create_db_file() -> None:
     """Create database file if it doesn't exist."""
     if not os.path.exists(path=DB_FILEPATH):
+        log.debug(msg="Creating database file.")
         with open(file=DB_FILEPATH, mode="w+", encoding="utf-8") as file:
             file.write("")
+        log.debug(msg=f"Database file created in: {DB_FILEPATH}")
+    else:
+        log.debug(msg="Database file already exists, skipping creation.")
 
 
 def set_matplotlib_backend() -> None:
@@ -60,5 +69,6 @@ def setup() -> None:
     create_data_dir()
     create_db_file()
     sqldb_communication.create_table()
+
     set_matplotlib_backend()
-    log.debug(msg="Application setup complete.")
+    log.info(msg="Application setup complete.")

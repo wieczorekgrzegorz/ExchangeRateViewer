@@ -21,6 +21,7 @@ def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
 
     try:
         response = requests.get(url=url, timeout=config.REQUEST_TIMEOUT)
+        log.debug(msg=f"Response from NBP API ({response.status_code}, {response.reason}): {response.text}")
     except requests.exceptions.RequestException as exc:
         log.exception(msg=exc)
         raise custom_exceptions.NBPConnectionError(message=error_message) from exc
@@ -45,7 +46,7 @@ def check_nbp_response(response: requests.Response, error_message: str) -> None:
         log.warning(msg=log_message)
         raise custom_exceptions.NBPConnectionError(message=error_message)
 
-    log.debug(msg=f"Request successfull, status code: {response.status_code}, {response.reason}.")
+    log.info(msg=f"Request successfull, status code: {response.status_code}, {response.reason}.")
 
 
 def get_list_of_currency_dicts_from(nbp_response: requests.Response) -> list[dict]:
@@ -98,8 +99,9 @@ def fetch_available_currencies() -> list[str]:
     Raises:
         custom_exceptions.NBPConnectionError: If failed to fetch available currencies from NBP API.
     """
-    log.info(msg="Fetching available currencies from NBP API.")
     error_message = "Failed to fetch available currencies from NBP API, check connection with NBP API."
+
+    log.info(msg="Fetching available currencies from NBP API.")
     response = connect_with_nbp_api(url=config.NBP_TABLES_URL, error_message=error_message)
     check_nbp_response(response=response, error_message=error_message)
     rates = get_list_of_currency_dicts_from(nbp_response=response)
@@ -131,8 +133,11 @@ def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> dict:
         custom_exceptions.NBPConnectionError: If failed to fetch currency exchange rates from NBP API.
     """
     error_message = "Failed to fetch currency exchange rates from NBP API, check connection with NBP API."
+
+    log.info(msg=f"Fetching currency exchange rates from NBP API ({currency}/PLN, {start_date}, {end_date}).")
     url = build_url(currency=currency, start_date=start_date, end_date=end_date)
     response = connect_with_nbp_api(url=url, error_message=error_message)
+
     check_nbp_response(response=response, error_message=error_message)
 
     return response.json()

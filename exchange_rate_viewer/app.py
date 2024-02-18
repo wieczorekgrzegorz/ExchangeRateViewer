@@ -157,6 +157,9 @@ def index() -> str:
             request_form=flask.request.form, today=today, yesterday=yesterday
         )
 
+        log.info(
+            msg=f"Checking if data for pair {selected_currency}/PLN for dates {start_date} to {end_date} is already present in local database."
+        )
         dates_recorded_for_currency = sqldb_communication.get_data_from_sql_table(
             currency=selected_currency,
             start_date=start_date,
@@ -164,11 +167,9 @@ def index() -> str:
             row_factory=lambda cursor, row: row[0],
         )
 
-        data_already_in_cache = is_data_already_in_cache(
+        if not is_data_already_in_cache(
             data_present=dates_recorded_for_currency, start_date=start_date, end_date=end_date
-        )
-
-        if data_already_in_cache is False:
+        ):
             currency_rates = nbp_api_communication.fetch_currency_rates(
                 currency=selected_currency, start_date=start_date, end_date=end_date
             )
@@ -186,7 +187,7 @@ def index() -> str:
             plot.generate_chart(currency_table=currency_table, selected_currency=selected_currency)
             return response
 
-        log.info(msg="Currency exchange rates fetched and chart generated successfully.")
+        log.info(msg="NBP currency exchange rates app finished successfully.")
         return flask.render_template(
             template_name_or_list="index.html",
             chart_available=True,
@@ -199,6 +200,8 @@ def index() -> str:
         )
 
     except (custom_exceptions.NBPConnectionError, custom_exceptions.InvalidInputError) as e:
+        log.exception(msg=f"Caught and handled an exception: {e.message}")
+
         return flask.render_template(
             template_name_or_list="index.html",
             error_message=e.message,
