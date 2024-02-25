@@ -102,7 +102,6 @@ def fetch_available_currencies() -> list[str]:
 
     log.info(msg="Fetching available currencies from NBP API.")
     response = connect_with_nbp_api(url=config.NBP_TABLES_URL, error_message=error_message)
-    print(f"available_currencies: {response.text}")
     check_nbp_response(response=response, general_error_message=error_message, error_404_message=error_message)
     rates = get_list_of_currency_dicts_from(nbp_response=response)
     available_currencies = get_available_currencies_from(rates=rates)
@@ -158,8 +157,6 @@ def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> list[
     log.info(msg=f"Fetching currency exchange rates from NBP API ({currency}/PLN, {start_date}, {end_date}).")
     url = build_url(currency=currency, start_date=start_date, end_date=end_date)
     response = connect_with_nbp_api(url=url, error_message=general_error_message)
-
-    print(f"Currency rates: {response.text}")
 
     check_nbp_response(
         response=response, general_error_message=general_error_message, error_404_message=error_404_message
