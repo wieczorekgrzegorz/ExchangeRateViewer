@@ -16,14 +16,15 @@ DB_DIR_PATH = os.path.join("exchange_rate_viewer", "database")
 DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
 LOGS_DIR_PATH = os.path.join("exchange_rate_viewer", "logs")
 LOGS_FILEPATH = os.path.join("exchange_rate_viewer", "logs", "errors_log.jsonl")
-CHART_FILEPATH = os.path.join("exchange_rate_viewer", "static", "chart.png")
 REQUEST_TIMEOUT = 60
+CHART_DIR_PATH = os.path.join("exchange_rate_viewer", "static")
+CHART_FILEPATH = os.path.join("exchange_rate_viewer", "static", "chart.png")
 LOGGING_CONFIG_FILEPATH = os.path.join("exchange_rate_viewer", "logging_config.yaml")
 MAX_DATE_RANGE = 93  # Maximum range of days allowed by NBP API
 
 
 def create_logs_dir() -> None:
-    """Check if data folder exists and create it if not."""
+    """Check if logs folder exists and create it if not."""
     if not os.path.exists(path=LOGS_DIR_PATH):
         print(f"Creating logs directory in: {LOGS_DIR_PATH}")
         os.makedirs(name=LOGS_DIR_PATH)
@@ -33,7 +34,7 @@ def create_logs_dir() -> None:
 
 
 def create_logs_file() -> None:
-    """Create database file if it doesn't exist."""
+    """Create error_logs file if it doesn't exist."""
     if not os.path.exists(path=LOGS_FILEPATH):
         print(f"Creating logs file in: {LOGS_FILEPATH}")
         with open(file=LOGS_FILEPATH, mode="w+", encoding="utf-8") as file:
@@ -50,6 +51,16 @@ def setup_logging() -> None:
     with open(file=LOGGING_CONFIG_FILEPATH, mode="r", encoding="utf-8") as f:
         config = yaml.safe_load(stream=f.read())
     logging.config.dictConfig(config=config)
+
+
+def create_static_dir() -> None:
+    """Check if static (chart) folder exists and create it if not."""
+    if not os.path.exists(path=CHART_DIR_PATH):
+        log.debug(msg="Creating data directory.")
+        os.makedirs(name=CHART_DIR_PATH)
+        log.debug(msg=f"Data directory created in: {CHART_DIR_PATH}")
+    else:
+        log.debug(msg="Data directory already exists, skipping creation.")
 
 
 def create_data_dir() -> None:

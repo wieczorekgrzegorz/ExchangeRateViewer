@@ -179,8 +179,9 @@ __azurite_db*__.json
 .ruff_cache
 
 # Project-specific
-temp/
+docker-sandbox/
 legacy/
 logs/
+temp/
 currency_rates.db
 chart.png
