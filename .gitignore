@@ -181,5 +181,6 @@ __azurite_db*__.json
 # Project-specific
 temp/
 legacy/
+logs/
 currency_rates.db
 chart.png
