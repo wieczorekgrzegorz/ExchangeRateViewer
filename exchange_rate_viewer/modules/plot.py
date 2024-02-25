@@ -7,7 +7,7 @@ import matplotlib.dates as mdates
 
 from modules import config
 
-log = logging.getLogger(name="log." + __name__)
+log = logging.getLogger(name="app_logger")
 
 
 def generate_chart(currency_table: list[tuple], selected_currency: str) -> None:

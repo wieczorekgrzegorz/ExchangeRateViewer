@@ -7,7 +7,7 @@ import requests
 from modules import custom_exceptions, config
 
 
-log = logging.getLogger(name="log." + __name__)
+log = logging.getLogger(name="app_logger")
 
 
 def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
@@ -24,7 +24,7 @@ def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
         log.debug(msg=f"Response from NBP API ({response.status_code}, {response.reason}): {response.text}")
     except requests.exceptions.RequestException as exc:
         log.exception(msg=exc)
-        raise custom_exceptions.NBPConnectionError(message=error_message) from exc
+        raise custom_exceptions.NBPConnectionError(message=error_message, response=response) from exc
 
     return response
 
@@ -38,12 +38,12 @@ def check_nbp_response(response: requests.Response, general_error_message: str, 
     """
 
     if response.status_code == 404:
-        raise custom_exceptions.NBPConnectionError(message=error_404_message)
+        raise custom_exceptions.NBPConnectionError(message=error_404_message, response=response)
 
     if response.status_code != 200:
         log_message = f"NBP API response (<{response.status_code}, {response.reason}>): {response.text}"
         log.warning(msg=log_message)
-        raise custom_exceptions.NBPConnectionError(message=general_error_message)
+        raise custom_exceptions.NBPConnectionError(message=general_error_message, response=response)
 
     log.info(msg=f"Request successfull, status code: {response.status_code}, {response.reason}.")
 
@@ -152,7 +152,9 @@ def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> list[
         custom_exceptions.NBPConnectionError: If failed to fetch currency exchange rates from NBP API.
     """
     general_error_message = "Failed to fetch currency exchange rates from NBP API, check connection with NBP API."
-    error_404_message = "Error 404: No data found for selected currency and/or time frame."
+    error_404_message = (
+        f"Error 404: No data found for selected currency ({currency}) and/or time frame ({start_date}, {end_date})."
+    )
 
     log.info(msg=f"Fetching currency exchange rates from NBP API ({currency}/PLN, {start_date}, {end_date}).")
     url = build_url(currency=currency, start_date=start_date, end_date=end_date)

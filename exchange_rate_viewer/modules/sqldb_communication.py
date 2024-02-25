@@ -6,7 +6,7 @@ from typing import Callable, Optional
 
 from modules import config
 
-log = logging.getLogger(name="log." + __name__)
+log = logging.getLogger(name="app_logger")
 
 
 def create_sql_connection() -> sqlite3.Connection:

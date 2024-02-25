@@ -7,7 +7,7 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from modules import custom_exceptions, config, nbp_api_communication, plot, sqldb_communication
 
-log = logging.getLogger(name="log." + __name__)
+log = logging.getLogger(name="app_logger")
 
 
 app = flask.Flask(import_name=__name__)
@@ -176,8 +176,6 @@ def index() -> str:
         )
 
     except (custom_exceptions.NBPConnectionError, custom_exceptions.InvalidInputError) as e:
-        log.exception(msg=f"Caught and handled an exception: {e.message}")
-
         return flask.render_template(
             template_name_or_list="index.html",
             error_message=e.message,
@@ -187,7 +185,7 @@ def index() -> str:
         )
 
     except Exception as exc:  # pylint: disable=broad-except
-        log.exception(msg=f"An unexpected error occurred:\n{exc}")
+        log.exception(msg=f"An unexpected error occurred:\n{exc}", stacklevel=2)
         return flask.render_template(
             template_name_or_list="index.html",
             error_message="An unexpected error occurred, please try again.",
