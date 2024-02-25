@@ -10,12 +10,12 @@ from exchange_rate_viewer.modules import sqldb_communication
 
 log = logging.getLogger(name="app_logger")
 
-NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
+NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
 DB_DIR_PATH = os.path.join("exchange_rate_viewer", "database")
 DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
 LOGS_DIR_PATH = os.path.join("exchange_rate_viewer", "logs")
-LOGS_FILEPATH = os.path.join("exchange_rate_viewer", "logs", "errors_log.jsonl")
+LOGS_FILEPATH = os.path.join("exchange_rate_viewer", "logs", "errors_log.log")
 CHART_FILEPATH = os.path.join("exchange_rate_viewer", "static", "chart.png")
 REQUEST_TIMEOUT = 60
 LOGGING_CONFIG_FILEPATH = os.path.join("exchange_rate_viewer", "logging_config.yaml")
