@@ -16,12 +16,12 @@ handlers:
     formatter: werkzeug
     level: INFO
 root:
-  level: DEBUG
+  level: INFO
   handlers: [default]
 loggers:
   log:
     handlers: [default]
-    level: DEBUG
+    level: INFO
     propagate: False
   werkzeug:
     handlers: [werkzeug]

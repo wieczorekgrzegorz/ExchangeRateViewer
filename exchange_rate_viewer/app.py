@@ -1,15 +1,13 @@
 """Flask app for fetching and displaying currency exchange rates from NBP API."""
 import logging
 import datetime
-import sqlite3
 
 import flask
 from werkzeug.datastructures import ImmutableMultiDict
 
-from modules import custom_exceptions, config, nbp_api_communication, plot
+from modules import custom_exceptions, config, nbp_api_communication, plot, sqldb_communication
 
 log = logging.getLogger(name="log." + __name__)
-config.setup()
 
 
 app = flask.Flask(import_name=__name__)
@@ -25,149 +23,19 @@ def date_to_str(date_obj: datetime.date) -> str:
     return date_obj.strftime("%Y-%m-%d")
 
 
-def get_difference_in_days(start_date: datetime.date, end_date: datetime.date) -> int:
-    """Calculate difference in days between two dates."""
-    return (end_date - start_date).days
-
-
-def is_data_already_in_cache(currency: str, start_date: datetime.date, end_date: datetime.date) -> bool:
-    """Check if requested data is already in local database. If not, download from NBP API.
-
-    Parameters:
-        currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
-    """
-
-    days_difference = get_difference_in_days(start_date=start_date, end_date=end_date)
-
-    dates_to_check = []
-
-    for i in range(days_difference):
-        date_to_check = start_date + datetime.timedelta(days=i)
-
-        if date_to_check.isoweekday() < 6:
-            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
-
-    conn = sqlite3.connect(database=config.DB_FILEPATH)
-    conn.row_factory = lambda cursor, row: row[0]
-    cached_list = []
-
-    with conn:
-        c = conn.cursor()
-        query = """
-                    SELECT
-                        date,
-                        rate
-                    FROM
-                        rates
-                    WHERE
-                        currency = ? AND date BETWEEN ? AND ?
-                    ORDER BY
-                        date
-                """
-        try:
-            c.execute(query, (currency, start_date, end_date))
-        except sqlite3.OperationalError:
-            return False
-
-    cached_list = c.fetchall()
-
-    for day in dates_to_check:
-        if day not in cached_list:
-            log.debug("Requested data not in cache, downloading from NBP API.")
-            return False
-    log.debug("Requested data aready in local db.")
-    return True
-
-
-def create_table(conn_cursor: sqlite3.Cursor) -> None:
-    """Create a table in the database."""
-    query = """
-            CREATE TABLE IF NOT EXISTS rates(
-                date     TIMESTAMP NOT NULL,
-                currency TEXT NOT NULL,
-                rate     REAL NOT NULL
-            )
-            """
-    conn_cursor.execute(query)
-
-
-def create_rows_to_insert(currency_rates: dict, currency: str) -> list[tuple]:
-    """Create rows to insert into the database."""
-    rows_to_insert = []
-
-    for item in currency_rates["rates"]:
-        effective_date = item["effectiveDate"]
-        rate = item["mid"]
-        rows_to_insert.append((effective_date, currency, rate))
-
-    return rows_to_insert
-
-
-def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
-    """Saves currency exchange rates to local database."""
-    log.debug(msg="Saving currency exchange rates to local DB.")
-    conn = sqlite3.connect(database=config.DB_FILEPATH)
-    with conn:
-        c = conn.cursor()
-        create_table(conn_cursor=c)
-
-        c.executemany("INSERT INTO rates VALUES (?, ?, ?)", rows_to_insert)
-
-        # remove duplicated rows
-        c.execute(
-            """
-                    DELETE
-                    FROM rates AS r1
-                    WHERE EXISTS (
-                        SELECT *
-                        FROM rates AS r2
-                        WHERE r1.date = r2.date
-                            AND r1.currency = r2.currency
-                            AND r1.rowid > r2.rowid
-                            )
-                        """
-        )
-
-        log.debug(msg="Currency exchange rates saved to local DB successfully.")
-
-
-def get_data_from_local_db(currency: str, start_date_str: str, end_date_str: str) -> list[tuple]:
-    """Fetches currency exchange rates from local database.
-
-    Parameters:
-        currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
-    """
-    log.debug(msg=f"Fetching currency exchange rates from local DB ({currency}, {start_date_str}, {end_date_str}).")
-    conn = sqlite3.connect(database=config.DB_FILEPATH)
-
-    with conn:
-        c = conn.cursor()
-        query = """
-            SELECT
-                date,
-                rate
-            FROM
-                rates
-            WHERE
-                currency = ?
-                AND date BETWEEN ? AND ?
-            ORDER BY
-                date
-        """
-        c.execute(query, (currency, start_date_str, end_date_str))
-
-        log.debug(msg="Currency exchange rates fetched successfully.")
-
-        return c.fetchall()
+def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
+    """Return today's and yesterday's date."""
+    return datetime.datetime.now().date(), datetime.datetime.now().date() - datetime.timedelta(days=1)
 
 
 def get_max_date_range() -> datetime.timedelta:
     """Return maximum date range allowed by NBP API."""
     return datetime.timedelta(days=config.MAX_DATE_RANGE)
+
+
+def get_difference_in_days(start_date: str, end_date: str) -> int:
+    """Calculate difference in days between two dates."""
+    return (str_to_date(date_str=end_date) - str_to_date(date_str=start_date)).days
 
 
 def validate_user_input(
@@ -202,24 +70,46 @@ def validate_user_input(
     return selected_currency, start_date_str, end_date_str
 
 
-def get_dates_to_check(start_date: datetime.date, days_difference: int) -> list[datetime.date]:
-    """Create a list of dates to check for data in local database. Excludes weekends."""
-    dates_to_check = []
+def define_all_days_to_check(start_date: str, days_difference: int) -> list[str]:
+    """Collect dates to check for data in local database. Excludes weekends."""
+    days_to_check = []
 
     for i in range(days_difference):
-        date_to_check = start_date + datetime.timedelta(days=i)
+        new_date = str_to_date(date_str=start_date) + datetime.timedelta(days=i)
 
-        if date_to_check.isoweekday() < 6:
-            dates_to_check.append(date_to_check.strftime("%Y-%m-%d"))
+        if new_date.isoweekday() < 6:
+            days_to_check.append(new_date.strftime("%Y-%m-%d"))
 
-    return dates_to_check
+    return days_to_check
+
+
+def is_data_already_in_cache(data_present: list[str], start_date: str, end_date: str) -> bool:
+    """Check if requested data is already in local database. If not, download from NBP API.
+
+    Parameters:
+        data_present (list[str]): list of dates in "YYYY-MM-DD" format representing data for a currency.
+        start_date (str): start date in "YYYY-MM-DD" format.
+        end_date (str): end date in "YYYY-MM-DD" format.
+    """
+
+    days_difference = get_difference_in_days(start_date=start_date, end_date=end_date)
+
+    days_to_check = define_all_days_to_check(start_date=start_date, days_difference=days_difference)
+
+    for day in days_to_check:
+        if day not in data_present:
+            log.info(msg="Requested data not (fully) present in local DB, sending request to NBP API.")
+            return False
+
+    log.debug(msg="Requested data fully present in local db.")
+    return True
 
 
 @app.route(rule="/", methods=["GET", "POST"])
 def index() -> str:
     """Main view for the app, fetches currency exchange rates from NBP API and displays them in a chart."""
 
-    today, yesterday = config.today_and_yesterday()
+    today, yesterday = today_and_yesterday()
 
     try:
         available_currencies = nbp_api_communication.fetch_available_currencies()
@@ -242,26 +132,30 @@ def index() -> str:
 
     # POST request
     try:
-        selected_currency, start_date_str, end_date_str = validate_user_input(
+        selected_currency, start_date, end_date = validate_user_input(
             request_form=flask.request.form, today=today, yesterday=yesterday
         )
 
-        start_date = str_to_date(date_str=start_date_str)
-        end_date = str_to_date(date_str=end_date_str)
-
-        data_already_in_cache = is_data_already_in_cache(
-            currency=selected_currency, start_date=start_date, end_date=end_date
+        log.info(
+            msg=f"Checking if data for pair {selected_currency}/PLN for dates {start_date} to {end_date} is already present in local database."
+        )
+        dates_recorded_for_currency = sqldb_communication.get_data_from_sql_table(
+            currency=selected_currency,
+            start_date=start_date,
+            end_date=end_date,
+            row_factory=lambda cursor, row: row[0],
         )
 
-        if data_already_in_cache is False:
+        if not is_data_already_in_cache(
+            data_present=dates_recorded_for_currency, start_date=start_date, end_date=end_date
+        ):
             currency_rates = nbp_api_communication.fetch_currency_rates(
-                currency=selected_currency, start_date_str=start_date_str, end_date_str=end_date_str
+                currency=selected_currency, start_date=start_date, end_date=end_date
             )
-            rows_to_insert = create_rows_to_insert(currency_rates=currency_rates, currency=selected_currency)
-            save_currency_rates_to_db(rows_to_insert=rows_to_insert)
+            sqldb_communication.save_currency_rates_to_db(rows_to_insert=currency_rates)
 
-        currency_table = get_data_from_local_db(
-            currency=selected_currency, start_date_str=start_date_str, end_date_str=end_date_str
+        currency_table = sqldb_communication.get_data_from_sql_table(
+            currency=selected_currency, start_date=start_date, end_date=end_date
         )
 
         @flask.after_this_request
@@ -269,7 +163,7 @@ def index() -> str:
             plot.generate_chart(currency_table=currency_table, selected_currency=selected_currency)
             return response
 
-        log.info(msg="Currency exchange rates fetched and chart generated successfully.")
+        log.info(msg="NBP currency exchange rates app finished successfully.")
         return flask.render_template(
             template_name_or_list="index.html",
             chart_available=True,
@@ -282,6 +176,8 @@ def index() -> str:
         )
 
     except (custom_exceptions.NBPConnectionError, custom_exceptions.InvalidInputError) as e:
+        log.exception(msg=f"Caught and handled an exception: {e.message}")
+
         return flask.render_template(
             template_name_or_list="index.html",
             error_message=e.message,
@@ -302,5 +198,8 @@ def index() -> str:
 
 
 if __name__ == "__main__":
+    config.setup_logging()
     log.info(msg="NBP currency exchange rates app started.")
+
+    config.setup_app()
     app.run()

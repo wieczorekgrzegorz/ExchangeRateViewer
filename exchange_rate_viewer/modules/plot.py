@@ -1,4 +1,4 @@
-"""Module to generate a chart with currency exchange rates and save it as a file. The chart is saved in the 'static' folder."""
+"""Module to generate a chart with currency exchange rates and save it as a file."""
 import logging
 
 import matplotlib.ticker
@@ -59,4 +59,4 @@ def generate_chart(currency_table: list[tuple], selected_currency: str) -> None:
     plt.savefig(config.CHART_FILEPATH, transparent=True)
     plt.close()
 
-    log.debug(msg="Chart generated and saved successfully.")
+    log.info(msg="Currency exchange rate chart generated successfully.")
