@@ -23,7 +23,7 @@ handlers:
     class: logging.handlers.RotatingFileHandler
     formatter: json
     level: ERROR
-    filename: "exchange_rate_viewer/logs/errors_log.log"
+    filename: "exchange_rate_viewer/logs/errors_log.jsonl"
     maxBytes: 10240 # 10KB
     backupCount: 3
 root:
