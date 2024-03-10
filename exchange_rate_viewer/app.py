@@ -200,4 +200,4 @@ if __name__ == "__main__":
     log.info(msg="NBP currency exchange rates app started.")
 
     config.setup_app()
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
