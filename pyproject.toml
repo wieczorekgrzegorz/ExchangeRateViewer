@@ -13,7 +13,6 @@ requests = "^2.31.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.0"
-ipykernel = "^6.29.2"
 
 [build-system]
 requires = ["poetry-core==1.7.1"]
