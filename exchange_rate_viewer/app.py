@@ -1,4 +1,5 @@
 """Flask app for fetching and displaying currency exchange rates from NBP API."""
+
 import logging
 import datetime
 
@@ -137,7 +138,7 @@ def index() -> str:
         )
 
         log.info(
-            msg=f"Checking if data for pair {selected_currency}/PLN for dates {start_date} to {end_date} is already present in local database."
+            msg=f"Checking if data for pair {selected_currency}/PLN for dates {start_date} to {end_date} is already present in local database."  # pylint: disable=line-too-long
         )
         dates_recorded_for_currency = sqldb_communication.get_data_from_sql_table(
             currency=selected_currency,
