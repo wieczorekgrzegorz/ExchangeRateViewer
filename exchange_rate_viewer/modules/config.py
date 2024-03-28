@@ -6,82 +6,30 @@ import yaml
 
 import matplotlib
 
-from exchange_rate_viewer.modules import sqldb_communication
+from modules import sqldb_communication
 
 log = logging.getLogger(name="app_logger")
 
+DB_DIR_PATH = os.environ["DB_DIR_PATH"]
+DB_FILEPATH = os.environ["DB_FILEPATH"]
+LOGS_DIR_PATH = os.environ["LOGS_DIR_PATH"]
+LOGS_FILEPATH = os.environ["LOGS_FILEPATH"]
+CHART_DIR_PATH = os.environ["CHART_DIR_PATH"]
+CHART_FILEPATH = os.environ["CHART_FILEPATH"]
+LOGGING_CONFIG_FILEPATH = os.environ["LOGGING_CONFIG_FILEPATH"]
+
 NBP_RATES_URL = "https://api.nbp.pl/api/exchangerates/rates/a/"
 NBP_TABLES_URL = "https://api.nbp.pl/api/exchangerates/tables/a"
-DB_DIR_PATH = os.path.join("exchange_rate_viewer", "database")
-DB_FILEPATH = os.path.join("exchange_rate_viewer", "database", "currency_rates.db")
-LOGS_DIR_PATH = os.path.join("exchange_rate_viewer", "logs")
-LOGS_FILEPATH = os.path.join("exchange_rate_viewer", "logs", "errors_log.jsonl")
-REQUEST_TIMEOUT = 60
-CHART_DIR_PATH = os.path.join("exchange_rate_viewer", "static")
-CHART_FILEPATH = os.path.join("exchange_rate_viewer", "static", "chart.png")
-LOGGING_CONFIG_FILEPATH = os.path.join("exchange_rate_viewer", "logging_config.yaml")
+
 MAX_DATE_RANGE = 93  # Maximum range of days allowed by NBP API
-
-
-def create_logs_dir() -> None:
-    """Check if logs folder exists and create it if not."""
-    if not os.path.exists(path=LOGS_DIR_PATH):
-        print(f"Creating logs directory in: {LOGS_DIR_PATH}")
-        os.makedirs(name=LOGS_DIR_PATH)
-        print(f"Logs directory created in: {LOGS_DIR_PATH}")
-    else:
-        print(f"Logs directory already exists in: {LOGS_DIR_PATH}, skipping creation.")
-
-
-def create_logs_file() -> None:
-    """Create error_logs file if it doesn't exist."""
-    if not os.path.exists(path=LOGS_FILEPATH):
-        print(f"Creating logs file in: {LOGS_FILEPATH}")
-        with open(file=LOGS_FILEPATH, mode="w+", encoding="utf-8") as file:
-            file.write("")
-        print(f"Logs file created in: {LOGS_FILEPATH}")
-    else:
-        print(f"Logs file already exists in: {LOGS_FILEPATH}, skipping creation.")
+REQUEST_TIMEOUT = 60
 
 
 def setup_logging() -> None:
     """Set up logging configuration."""
-    create_logs_dir()
-    create_logs_file()
     with open(file=LOGGING_CONFIG_FILEPATH, mode="r", encoding="utf-8") as f:
         config = yaml.safe_load(stream=f.read())
     logging.config.dictConfig(config=config)
-
-
-def create_static_dir() -> None:
-    """Check if static (chart) folder exists and create it if not."""
-    if not os.path.exists(path=CHART_DIR_PATH):
-        log.debug(msg="Creating data directory.")
-        os.makedirs(name=CHART_DIR_PATH)
-        log.debug(msg=f"Data directory created in: {CHART_DIR_PATH}")
-    else:
-        log.debug(msg="Data directory already exists, skipping creation.")
-
-
-def create_data_dir() -> None:
-    """Check if data folder exists and create it if not."""
-    if not os.path.exists(path=DB_DIR_PATH):
-        log.debug(msg="Creating data directory.")
-        os.makedirs(name=DB_DIR_PATH)
-        log.debug(msg=f"Data directory created in: {DB_DIR_PATH}")
-    else:
-        log.debug(msg="Data directory already exists, skipping creation.")
-
-
-def create_db_file() -> None:
-    """Create database file if it doesn't exist."""
-    if not os.path.exists(path=DB_FILEPATH):
-        log.debug(msg="Creating database file.")
-        with open(file=DB_FILEPATH, mode="w+", encoding="utf-8") as file:
-            file.write("")
-        log.debug(msg=f"Database file created in: {DB_FILEPATH}")
-    else:
-        log.debug(msg="Database file already exists, skipping creation.")
 
 
 def set_matplotlib_backend() -> None:
@@ -90,10 +38,9 @@ def set_matplotlib_backend() -> None:
     matplotlib.use(backend="Agg")
 
 
-def setup_app() -> None:
+def setup() -> None:
     """Set up the application."""
-    create_data_dir()
-    create_db_file()
+    setup_logging()
     sqldb_communication.create_table()
 
     set_matplotlib_backend()

@@ -17,6 +17,30 @@ This is a Python Flask application designed for Python developers. It fetches cu
 - using `yaml` for logging configuration
 
 
+## Running the Application
+
+This app is containerized using Docker. To run the application, you need to have Docker installed on your machine. You can install Docker by following the instructions on the [official website](https://docs.docker.com/get-docker/).
+
+Before building a Docker image, you need to create a `.env` file in the `.docker` directory and set the following environment variables:
+```
+DB_DIR_PATH=exchange_rate_viewer/database
+DB_FILEPATH=exchange_rate_viewer/database/currency_rates.db
+LOGS_DIR_PATH=exchange_rate_viewer/logs
+LOGS_FILEPATH=exchange_rate_viewer/logs/errors_log.jsonl
+CHART_DIR_PATH=exchange_rate_viewer/static
+CHART_FILEPATH=exchange_rate_viewer/static/chart.png
+LOGGING_CONFIG_FILEPATH=exchange_rate_viewer/logging_config.yaml
+```
+
+
+Once you have Docker installed and .env file prepared, you can run the application using the following command in .docker directory:
+
+```bash
+docker-compose up --build
+```
+
+
+
 
 ## Development Environment
 

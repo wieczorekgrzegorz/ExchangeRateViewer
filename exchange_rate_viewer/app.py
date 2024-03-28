@@ -197,8 +197,7 @@ def index() -> str:
 
 
 if __name__ == "__main__":
-    config.setup_logging()
+    config.setup()
     log.info(msg="NBP currency exchange rates app started.")
 
-    config.setup_app()
     app.run(host="0.0.0.0", port=5000)
