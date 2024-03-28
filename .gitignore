@@ -179,5 +179,4 @@ __azurite_db*__.json
 .ruff_cache
 
 # Project-specific
-docker-sandbox/
-.env
+temp/*
