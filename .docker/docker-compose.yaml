@@ -4,5 +4,13 @@ services:
     build:
       context: ../
       dockerfile: .docker/Dockerfile
+    environment:
+      - DB_DIR_PATH=${DB_DIR_PATH}
+      - DB_FILEPATH=${DB_FILEPATH}
+      - LOGS_DIR_PATH=${LOGS_DIR_PATH}
+      - LOGS_FILEPATH=${LOGS_FILEPATH}
+      - CHART_DIR_PATH=${CHART_DIR_PATH}
+      - CHART_FILEPATH=${CHART_FILEPATH}
+      - LOGGING_CONFIG_FILEPATH=${LOGGING_CONFIG_FILEPATH}
     ports:
       - "5000:5000"

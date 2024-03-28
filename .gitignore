@@ -180,8 +180,4 @@ __azurite_db*__.json
 
 # Project-specific
 docker-sandbox/
-legacy/
-logs/
-temp/
-currency_rates.db
-chart.png
+.env
