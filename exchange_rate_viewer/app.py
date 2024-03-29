@@ -6,37 +6,12 @@ import datetime
 import flask
 from werkzeug.datastructures import ImmutableMultiDict
 
-from modules import custom_exceptions, config, nbp_api_communication, plot, sqldb_communication
+from modules import custom_exceptions, config, datetime_operations, nbp_api_communication, plot, sqldb_communication
 
 log = logging.getLogger(name="app_logger")
 
 
 app = flask.Flask(import_name=__name__)
-
-
-def str_to_date(date_str: str) -> datetime.date:
-    """Convert date string to datetime object."""
-    return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
-
-
-def date_to_str(date_obj: datetime.date) -> str:
-    """Convert date object to string."""
-    return date_obj.strftime("%Y-%m-%d")
-
-
-def today_and_yesterday() -> tuple[datetime.date, datetime.date]:
-    """Return today's and yesterday's date."""
-    return datetime.datetime.now().date(), datetime.datetime.now().date() - datetime.timedelta(days=1)
-
-
-def get_max_date_range() -> datetime.timedelta:
-    """Return maximum date range allowed by NBP API."""
-    return datetime.timedelta(days=config.MAX_DATE_RANGE)
-
-
-def get_difference_in_days(start_date: str, end_date: str) -> int:
-    """Calculate difference in days between two dates."""
-    return (str_to_date(date_str=end_date) - str_to_date(date_str=start_date)).days
 
 
 def validate_user_input(
@@ -48,7 +23,7 @@ def validate_user_input(
         custom_exceptions.InvalidInputError: If input is invalid.
     """
     error_message = None
-    max_range = get_max_date_range()
+    max_range = datetime_operations.get_max_date_range()
 
     selected_currency = request_form.get(key="currency")
 
@@ -56,14 +31,14 @@ def validate_user_input(
         error_message = "Please select a currency."
         raise custom_exceptions.InvalidInputError(message=error_message)
 
-    start_date_str = request_form.get(key="start_date", default=date_to_str(date_obj=yesterday))
-    end_date_str = request_form.get(key="end_date", default=date_to_str(date_obj=today))
+    start_date_str = request_form.get(key="start_date", default=datetime_operations.date_to_str(date_obj=yesterday))
+    end_date_str = request_form.get(key="end_date", default=datetime_operations.date_to_str(date_obj=today))
 
-    if str_to_date(date_str=start_date_str) > str_to_date(date_str=end_date_str):
+    if datetime_operations.start_date_after_end_date(start_date=start_date_str, end_date=end_date_str):
         error_message = "'Start Date' cannot be after 'End Date'."
         raise custom_exceptions.InvalidInputError(message=error_message)
 
-    if str_to_date(date_str=end_date_str) - str_to_date(date_str=start_date_str) > max_range:
+    if datetime_operations.max_range_exceeded(start_date=start_date_str, end_date=end_date_str, max_range=max_range):
         error_message = "Maximum date range is 93 calendar days."
         raise custom_exceptions.InvalidInputError(message=error_message)
 
@@ -71,20 +46,7 @@ def validate_user_input(
     return selected_currency, start_date_str, end_date_str
 
 
-def define_all_days_to_check(start_date: str, days_difference: int) -> list[str]:
-    """Collect dates to check for data in local database. Excludes weekends."""
-    days_to_check = []
-
-    for i in range(days_difference):
-        new_date = str_to_date(date_str=start_date) + datetime.timedelta(days=i)
-
-        if new_date.isoweekday() < 6:
-            days_to_check.append(new_date.strftime("%Y-%m-%d"))
-
-    return days_to_check
-
-
-def is_data_already_in_cache(data_present: list[str], start_date: str, end_date: str) -> bool:
+def data_already_in_cache(data_present: list[str], start_date: str, end_date: str) -> bool:
     """Check if requested data is already in local database. If not, download from NBP API.
 
     Parameters:
@@ -93,9 +55,9 @@ def is_data_already_in_cache(data_present: list[str], start_date: str, end_date:
         end_date (str): end date in "YYYY-MM-DD" format.
     """
 
-    days_difference = get_difference_in_days(start_date=start_date, end_date=end_date)
+    days_difference = datetime_operations.get_difference_in_days(start_date=start_date, end_date=end_date)
 
-    days_to_check = define_all_days_to_check(start_date=start_date, days_difference=days_difference)
+    days_to_check = datetime_operations.define_all_days_to_check(start_date=start_date, days_difference=days_difference)
 
     for day in days_to_check:
         if day not in data_present:
@@ -110,7 +72,7 @@ def is_data_already_in_cache(data_present: list[str], start_date: str, end_date:
 def index() -> str:
     """Main view for the app, fetches currency exchange rates from NBP API and displays them in a chart."""
 
-    today, yesterday = today_and_yesterday()
+    today, yesterday = datetime_operations.today_and_yesterday()
 
     try:
         available_currencies = nbp_api_communication.fetch_available_currencies()
@@ -147,7 +109,7 @@ def index() -> str:
             row_factory=lambda cursor, row: row[0],
         )
 
-        if not is_data_already_in_cache(
+        if not data_already_in_cache(
             data_present=dates_recorded_for_currency, start_date=start_date, end_date=end_date
         ):
             currency_rates = nbp_api_communication.fetch_currency_rates(
