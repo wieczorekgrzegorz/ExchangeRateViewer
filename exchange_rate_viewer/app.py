@@ -171,6 +171,5 @@ if __name__ == "__main__":
     config.setup_logging()
     sqldb_communication.create_table()
     plot.set_matplotlib_backend()
-    log.info(msg="NBP currency exchange rates app started.")
 
     app.run(host="0.0.0.0", port=5000)
