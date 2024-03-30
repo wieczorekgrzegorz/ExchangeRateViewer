@@ -23,28 +23,21 @@ app = flask.Flask(import_name=__name__)
 
 
 def data_already_in_cache(
-    data_present: list[tuple[str, float]],
-    start_date: datetime.date,
-    end_date: datetime.date,
+    currency_table: list[tuple[str, float]],
+    days_to_check: list[datetime.date],
 ) -> bool:
     """Check if requested data is already in local database. If not, download from NBP API.
 
     Parameters:
         data_present (list[str]): list of dates in "YYYY-MM-DD" format representing data for a currency.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
+        days_to_check (list[datetime.date]): list of dates to check.
     """
-    if not data_present:
+    if not currency_table:
         log.info(msg="Requested data not present in local DB, sending request to NBP API.")
         return False
 
-    days_to_check = datetime_operations.define_all_days_to_check(
-        start_date=start_date,
-        days_difference=datetime_operations.get_difference_in_days(start_date=start_date, end_date=end_date),
-    )
-
     for day in days_to_check:
-        if day not in data_present:
+        if day not in currency_table:
             log.info(msg="Requested data not (fully) present in local DB, sending request to NBP API.")
             return False
 
@@ -57,12 +50,13 @@ def download_from_nbp_api(user_input: user_input_class.UserInput) -> list[tuple[
     Returns the data from the local database.
     """
     log.info(msg="Data not fully present in local database, fetching from NBP API.")
-    currency_rates = nbp_api_communication.fetch_currency_rates(
-        currency=user_input.selected_currency,
-        start_date=user_input.start_date,
-        end_date=user_input.end_date,
+    sqldb_communication.save_currency_rates_to_db(
+        rows_to_insert=nbp_api_communication.fetch_currency_rates(
+            currency=user_input.selected_currency,
+            start_date=user_input.start_date,
+            end_date=user_input.end_date,
+        )
     )
-    sqldb_communication.save_currency_rates_to_db(rows_to_insert=currency_rates)
 
     return sqldb_communication.get_data_from_sql_table(
         currency=user_input.selected_currency, start_date=user_input.start_date, end_date=user_input.end_date
@@ -120,7 +114,14 @@ def index() -> str:
         )
 
         if not data_already_in_cache(
-            data_present=currency_table, start_date=user_input.start_date, end_date=user_input.end_date
+            currency_table=currency_table,
+            days_to_check=datetime_operations.define_all_days_to_check(
+                start_date=user_input.start_date,
+                days_difference=datetime_operations.get_difference_in_days(
+                    start_date=user_input.start_date,
+                    end_date=user_input.end_date,
+                ),
+            ),
         ):
             currency_table = download_from_nbp_api(user_input=user_input)
 
