@@ -28,8 +28,7 @@ def define_all_days_to_check(start_date: datetime.date, days_difference: int) ->
         new_date = add_days_to_date(date_obj=start_date, days=i)
 
         if date_not_weekend(date_to_check=new_date):
-            # days_to_check.append(date_to_str(date_obj=start_date))
-            days_to_check.append(start_date)
+            days_to_check.append(date_to_str(date_obj=new_date))
 
     return days_to_check
 

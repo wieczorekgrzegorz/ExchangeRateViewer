@@ -22,6 +22,11 @@ log = logging.getLogger(name="app_logger")
 app = flask.Flask(import_name=__name__)
 
 
+def get_dates_from(currency_table: list[tuple[str, float]]) -> list[str]:
+    """Extract dates from currency_table and return them as a list of str objects."""
+    return [row[0] for row in currency_table]
+
+
 def data_already_in_cache(
     currency_table: list[tuple[str, float]],
     days_to_check: list[datetime.date],
@@ -36,8 +41,10 @@ def data_already_in_cache(
         log.info(msg="Requested data not present in local DB, sending request to NBP API.")
         return False
 
+    log.info(msg=f"currency_table: {currency_table}")
+
     for day in days_to_check:
-        if day not in currency_table:
+        if day not in get_dates_from(currency_table=currency_table):
             log.info(msg="Requested data not (fully) present in local DB, sending request to NBP API.")
             return False
 
