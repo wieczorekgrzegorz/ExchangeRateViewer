@@ -33,7 +33,7 @@ class NBPConnectionError(Exception):
         return self.message
 
     def __repr__(self) -> str:
-        return f"ConnectionError(message={self.message})"
+        return f"NBPConnectionError(message={self.message})"
 
     def build_extra_details(self, response: requests.Response) -> dict:
         """Build extra details for the log record from the response."""
@@ -47,5 +47,5 @@ class NBPConnectionError(Exception):
             "response_reason": response.reason,
             "response_content": response_content,
         }
-        print(f"Extra details: {extra}")
+        log.debug(msg=f"Extra details: {extra}")
         return extra

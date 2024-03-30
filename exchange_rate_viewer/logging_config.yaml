@@ -22,8 +22,8 @@ handlers:
   file:
     class: logging.handlers.RotatingFileHandler
     formatter: json
-    level: ERROR
-    filename: $LOGS_FILEPATH
+    level: WARNING
+    filename: ${LOGS_FILEPATH}
     maxBytes: 10240 # 10KB
     backupCount: 3
 root:

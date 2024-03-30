@@ -1,5 +1,6 @@
 """Module for communication with NBP API."""
 
+import datetime
 import logging
 
 import requests
@@ -38,6 +39,8 @@ def check_nbp_response(response: requests.Response, general_error_message: str, 
     """
 
     if response.status_code == 404:
+        log_message = f"NBP API response (<{response.status_code}, {response.reason}>): {response.text}"
+        log.warning(msg=log_message)
         raise custom_exceptions.NBPConnectionError(message=error_404_message, response=response)
 
     if response.status_code != 200:
@@ -109,13 +112,13 @@ def fetch_available_currencies() -> list[str]:
     return available_currencies
 
 
-def build_url(currency: str, start_date: str, end_date: str) -> str:
+def build_url(currency: str, start_date: datetime.date, end_date: datetime.date) -> str:
     """Builds NBP API URL for fetching currency exchange rates.
 
     Parameters:
         currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
+        start_date (datetime.date): start date in "YYYY-MM-DD" format.
+        end_date (datetime.date): end date in "YYYY-MM-DD" format.
     """
     return config.NBP_RATES_URL + f"{currency}/{start_date}/{end_date}"
 
@@ -137,13 +140,17 @@ def convert_nbp_response_to_list_of_exchange_rates(response_json: dict, currency
     return rows_to_insert
 
 
-def fetch_currency_rates(currency: str, start_date: str, end_date: str) -> list[tuple[str, str, str]]:
+def fetch_currency_rates(
+    currency: str,
+    start_date: datetime.date,
+    end_date: datetime.date,
+) -> list[tuple[str, str, str]]:
     """Fetches currency exchange rates from NBP API.
 
     Parameters:
         currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
+        start_date (datetime.date): start date in "YYYY-MM-DD" format.
+        end_date (datetime.date): end date in "YYYY-MM-DD" format.
 
     Returns:
         list[tuple]: List of tuples containing date, currency code and exchange rate.

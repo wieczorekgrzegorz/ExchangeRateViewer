@@ -1,4 +1,4 @@
-# NBP currency Flask app
+# NBP currency Flask app, conteinarized (with Docker)
 
 ## Description
 This is a Python Flask application designed for Python developers. It fetches currency exchange rates from the NBP API, saves them to an SQLite database, and generates a chart for a selected currency. It provides a practical example of integrating APIs, working with databases, and generating visualizations.
@@ -21,13 +21,10 @@ This is a Python Flask application designed for Python developers. It fetches cu
 
 This app is containerized using Docker. To run the application, you need to have Docker installed on your machine. You can install Docker by following the instructions on the [official website](https://docs.docker.com/get-docker/).
 
-Before building a Docker image, you need to create a `.env` file in the `.docker` directory and set the following environment variables:
+Before building a Docker image, you need to create a `.env` file inside the `.docker` directory and set the following environment variables:
 ```
-DB_DIR_PATH=exchange_rate_viewer/database
 DB_FILEPATH=exchange_rate_viewer/database/currency_rates.db
-LOGS_DIR_PATH=exchange_rate_viewer/logs
-LOGS_FILEPATH=exchange_rate_viewer/logs/errors_log.jsonl
-CHART_DIR_PATH=exchange_rate_viewer/static
+LOGS_FILEPATH=exchange_rate_viewer/logs/warnings_errors_log.jsonl
 CHART_FILEPATH=exchange_rate_viewer/static/chart.png
 LOGGING_CONFIG_FILEPATH=exchange_rate_viewer/logging_config.yaml
 ```

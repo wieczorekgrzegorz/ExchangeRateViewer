@@ -1,8 +1,9 @@
 """Module for communication with the local SQLite database."""
+
+import datetime
 import logging
 
 import sqlite3
-from typing import Callable, Optional
 
 from modules import config
 
@@ -16,7 +17,7 @@ def create_sql_connection() -> sqlite3.Connection:
 
 def create_table() -> None:
     """Create a table in the database."""
-    log.debug(msg="Creating table 'rates' in the database.")
+    log.debug(msg="Creating table 'rates' in the database (if it doesn't exist).")
     conn = create_sql_connection()
     with conn:
         conn_cursor = conn.cursor()
@@ -28,30 +29,26 @@ def create_table() -> None:
                     UNIQUE(date, currency)
                 )
                 """
+        log.debug(msg=f"Executing query: {query}.")
         conn_cursor.execute(query)
 
-    log.debug(msg="Table 'rates' created in the local database.")
+    log.debug(msg="'CREATE TABLE IF NOT EXISTS' query executed successfully.")
 
 
 def get_data_from_sql_table(
     currency: str,
-    start_date: str,
-    end_date: str,
-    row_factory: Optional[sqlite3.Row | Callable] = None,
-) -> list:
+    start_date: datetime.date,
+    end_date: datetime.date,
+) -> list[tuple[str, float]]:
     """Fetches currency exchange rates from local database.
 
     Parameters:
         currency (str): currency code as per NBP API.
-        start_date (str): start date in "YYYY-MM-DD" format.
-        end_date (str): end date in "YYYY-MM-DD" format.
-        row_factory (sqlite3.Row | Callable): row factory for the cursor.
+        start_date (datetime.date): start date in "YYYY-MM-DD" format.
+        end_date (datetime.date): end date in "YYYY-MM-DD" format.
     """
     log.info(msg=f"Fetching currency exchange rates from local DB ({currency}/PLN, {start_date}, {end_date}).")
     conn = create_sql_connection()
-
-    if row_factory:
-        conn.row_factory = row_factory
 
     with conn:
         c = conn.cursor()
@@ -67,6 +64,7 @@ def get_data_from_sql_table(
             ORDER BY
                 date
         """
+        log.debug(msg=f"Executing query: {query} with parameters: {currency}, {start_date}, {end_date}.")
         c.execute(query, (currency, start_date, end_date))
 
         currency_table = c.fetchall()
@@ -85,9 +83,10 @@ def save_currency_rates_to_db(rows_to_insert: list[tuple]) -> None:
     with conn:
         c = conn.cursor()
 
-        c.executemany(
-            "INSERT OR REPLACE INTO rates VALUES (?, ?, ?)",
-            rows_to_insert,
-        )
+        query = """INSERT OR REPLACE INTO rates VALUES (?, ?, ?)"""
+
+        log.debug(msg="Executing query: 'INSERT OR REPLACE INTO rates VALUES (?, ?, ?)' with multiple rows to insert.")
+
+        c.executemany(query, rows_to_insert)
 
         log.info(msg="Currency exchange rates saved to local DB successfully.")
