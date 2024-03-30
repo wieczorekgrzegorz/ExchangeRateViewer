@@ -7,7 +7,7 @@ from modules import config
 
 def get_difference_in_days(start_date: datetime.date, end_date: datetime.date) -> int:
     """Calculate difference in days between two dates."""
-    return (start_date - end_date).days
+    return (end_date - start_date).days
 
 
 def add_days_to_date(date_obj: datetime.date, days: int) -> datetime.date:
