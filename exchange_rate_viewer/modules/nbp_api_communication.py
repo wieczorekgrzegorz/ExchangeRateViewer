@@ -25,7 +25,7 @@ def connect_with_nbp_api(url: str, error_message: str) -> requests.Response:
         log.debug(msg=f"Response from NBP API ({response.status_code}, {response.reason}): {response.text}")
     except requests.exceptions.RequestException as exc:
         log.exception(msg=exc)
-        raise custom_exceptions.NBPConnectionError(message=error_message, response=response) from exc
+        raise custom_exceptions.NBPConnectionError(message=error_message, response=exc.response) from exc
 
     return response
 

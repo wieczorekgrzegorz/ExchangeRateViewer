@@ -1,4 +1,5 @@
 """Module to generate a chart with currency exchange rates and save it as a file."""
+
 import logging
 
 import matplotlib.ticker
@@ -8,6 +9,12 @@ import matplotlib.dates as mdates
 from modules import config
 
 log = logging.getLogger(name="app_logger")
+
+
+def set_matplotlib_backend() -> None:
+    """Set a non-reactive backend for matplotlib to avoid
+    "Tcl_AsyncDelete: async handler deleted by the wrong thread" error."""
+    matplotlib.use(backend="Agg")
 
 
 def generate_chart(currency_table: list[tuple], selected_currency: str) -> None:
