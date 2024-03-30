@@ -39,6 +39,8 @@ def check_nbp_response(response: requests.Response, general_error_message: str, 
     """
 
     if response.status_code == 404:
+        log_message = f"NBP API response (<{response.status_code}, {response.reason}>): {response.text}"
+        log.warning(msg=log_message)
         raise custom_exceptions.NBPConnectionError(message=error_404_message, response=response)
 
     if response.status_code != 200:
