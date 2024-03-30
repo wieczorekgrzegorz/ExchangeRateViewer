@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir poetry
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry update & poetry install --no-dev --no-interaction --no-ansi
+RUN poetry install --only main --no-interaction --no-ansi
 
 COPY exchange_rate_viewer/ exchange_rate_viewer/
 
