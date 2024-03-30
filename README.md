@@ -1,4 +1,4 @@
-# NBP currency Flask app
+# NBP currency Flask app, conteinarized (with Docker)
 
 ## Description
 This is a Python Flask application designed for Python developers. It fetches currency exchange rates from the NBP API, saves them to an SQLite database, and generates a chart for a selected currency. It provides a practical example of integrating APIs, working with databases, and generating visualizations.
