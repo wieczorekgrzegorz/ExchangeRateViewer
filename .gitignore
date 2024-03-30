@@ -177,6 +177,3 @@ __azurite_db*__.json
 
 # Ruff
 .ruff_cache
-
-# Project-specific
-temp/*
