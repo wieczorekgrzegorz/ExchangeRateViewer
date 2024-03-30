@@ -41,5 +41,6 @@ def setup_logging() -> None:
     replace_log_filepath(config=config)
 
     logging.config.dictConfig(config=config)
+    log.info(msg="NBP currency exchange rates app started.")
 
     log.info(msg="Logging configuration set up successfully.")
