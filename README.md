@@ -5,10 +5,10 @@ This is a Python Flask application designed for Python developers. It fetches cu
 
 ## Features
 
+- Creating a RESTful API using `Flask`
 - Fetching currency exchange rates from the NBP API using `requests` module
 - Saving exchange rates to an SQLite database using `sqlite3`
 - Generating a chart for a selected currency using `matplotlib`
-- Creating a RESTful API using `Flask`
 - Using environment variables to store sensitive data
 - Using `pre-commit` hooks to ensure code quality and consistency
 - Using `Poetry` for dependency management
@@ -36,10 +36,21 @@ Once you have Docker installed and .env file prepared, you can run the applicati
 docker-compose up --build
 ```
 
-
-
+Once the application is running, you can access it by visiting `http://localhost:5000` in your web browser.
 
 ## Development Environment
+
+### Testing
+
+This project uses `unittest` for testing. You can run the tests using the following command:
+
+```bash
+poetry run python -m unittest
+```
+
+### Logging
+
+This project uses the `logging` module to log warnings and errors to a JSON Lines file. The logging configuration is stored in the `logging_config.yaml` file. You can change the logging configuration by modifying this file.
 
 ### Pre-commit Hooks
 
