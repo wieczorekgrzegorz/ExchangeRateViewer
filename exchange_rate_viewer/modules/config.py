@@ -5,10 +5,6 @@ import logging.config
 import os
 import yaml
 
-import matplotlib
-
-from modules import sqldb_communication
-
 log = logging.getLogger(name="app_logger")
 
 DB_FILEPATH = os.environ["DB_FILEPATH"]
@@ -46,18 +42,4 @@ def setup_logging() -> None:
 
     logging.config.dictConfig(config=config)
 
-
-def set_matplotlib_backend() -> None:
-    """Set a non-reactive backend for matplotlib to avoid
-    "Tcl_AsyncDelete: async handler deleted by the wrong thread" error."""
-    matplotlib.use(backend="Agg")
-
-
-def setup() -> None:
-    """Set up the application."""
-    setup_logging()
-    sqldb_communication.create_table()
-
-    set_matplotlib_backend()
-
-    log.info(msg="Application setup completed.")
+    log.info(msg="Logging configuration set up successfully.")
