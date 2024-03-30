@@ -9,6 +9,7 @@ from modules import (
     custom_exceptions,
     config,
     datetime_operations,
+    input_validator_class,
     nbp_api_communication,
     plot,
     sqldb_communication,
@@ -96,7 +97,7 @@ def index() -> str:
     # else: flask.request.method == "POST"
     try:
         user_input = user_input_class.UserInput(request_form=flask.request.form)
-        validator = user_input_class.Validator(user_input=user_input)
+        validator = input_validator_class.InputValidator(user_input=user_input)
         validator.run()
 
     except custom_exceptions.InvalidInputError as e:
@@ -116,7 +117,6 @@ def index() -> str:
             currency=user_input.selected_currency,
             start_date=user_input.start_date,
             end_date=user_input.end_date,
-            # row_factory=lambda cursor, row: row[0],
         )
 
         if not data_already_in_cache(
